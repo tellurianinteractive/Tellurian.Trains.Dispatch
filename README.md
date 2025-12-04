@@ -30,10 +30,22 @@ Represents a train's scheduled movement over a DispatchStretch, connecting a dep
 
 ### Block Signals
 Intermediate signal points on a DispatchStretch that divide the stretch into blocks (segments). When present, they allow multiple trains to occupy the same stretch simultaneously, but only one train per block:
-- N block signals create N+1 blocks
-- A train occupies one block at a time
+- N block signals create N+1 blocks (e.g., 2 signals = 3 blocks)
+- A train occupies one block at a time, tracked by its current block index
 - When a train passes a block signal, it moves to the next block, freeing the previous one
 - Each block signal is controlled by a dispatcher who confirms when a train passes
+- Block signals can be located at junctions where tracks diverge
+
+### Block Occupancy
+The library tracks which block each train currently occupies:
+- **Block 0**: From the departure station to the first block signal
+- **Block 1...N-1**: Between consecutive block signals
+- **Block N**: From the last block signal to the arrival station
+
+A train's current block index is derived from the count of passed block signal passages. This enables:
+- Capacity enforcement: only one train per block in the same direction
+- Progress tracking: dispatchers see which block each train occupies
+- Safe following: the next train can only enter a block after the previous train clears it
 
 ## Train Lifecycle
 
@@ -50,15 +62,42 @@ Alternative endings: **Canceled** (before running) or **Aborted** (during operat
 
 Each TrainStretch follows this dispatch workflow:
 
-1. **Requested** - Departure station requests permission to dispatch
-2. **Accepted** or **Rejected** - Arrival station responds based on capacity and conditions
-3. **Departed** - Train has left the departure station (occupies first block)
+1. **Requested** - Departure dispatcher requests permission to dispatch
+2. **Accepted** or **Rejected** - Arrival dispatcher responds based on capacity and conditions
+3. **Departed** - Train has left the departure station (occupies Block 0)
 4. **Block Signal Passages** - If block signals exist, the controlling dispatcher marks each passage in sequence
-5. **Arrived** - Train has arrived at the destination station (only after all block signals passed)
+5. **Arrived** - Train has arrived at the destination station (only available after all block signals passed)
 
 An accepted request can be **Revoked** before departure if circumstances change.
 
-If a train is canceled or aborted while on the stretch, it must be manually cleared to free the block it occupies.
+### Dispatcher Actions
+
+The library uses a state machine pattern where each dispatcher is presented only the actions valid for the current state:
+
+**Departure Dispatcher**:
+- Request dispatch when state is None, Rejected, or Revoked
+- Mark as Departed when Accepted
+- Revoke a request when Requested or Accepted
+
+**Arrival Dispatcher**:
+- Accept or Reject when Requested
+- Mark as Arrived when Departed and all block signals passed
+
+**Block Signal Dispatcher** (for signals they control):
+- Mark passage when train is in the block before this signal (current block index matches signal index)
+
+### Capacity Rules
+
+Before accepting a dispatch request, the system checks capacity:
+- **Single track**: No trains in the opposite direction allowed
+- **All tracks**: Block 0 must be free (no train in the first segment moving in the same direction)
+
+### Handling Canceled/Aborted Trains
+
+If a train is canceled or aborted while on the stretch (state is Departed):
+- The train must be manually cleared using the ClearFromStretch action
+- Clearing removes the train from active trains and frees the block it occupies
+- All expected block signal passages are marked as Canceled
 
 ## Integration Interfaces
 
