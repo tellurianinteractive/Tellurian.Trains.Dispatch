@@ -26,7 +26,7 @@ This is a .NET library for dispatching trains between stations on a model railwa
 ## Architecture Patterns
 
 - **Extension Methods** - Behavior is organized into extension method classes for separation of concerns.
-- **Option<T>** - Railway-oriented error handling for operations that can fail with messages.
+- **Option<T>** - Generic error handling for operations that can fail with messages.
 - **Dependency Injection Ready** - Core interfaces (IBrokerConfiguration, IBrokerStateProvider, ITimeProvider) allow flexible integration.
 - **Thread-Safe ID Generation** - Auto-incrementing IDs use Interlocked for safety.
 

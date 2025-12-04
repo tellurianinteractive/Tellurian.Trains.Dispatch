@@ -1,5 +1,7 @@
 ﻿namespace Tellurian.Trains.Dispatch;
-
+/// <summary>
+/// 
+/// </summary>
 public interface IBrokerStateProvider
 { 
     Task<bool> SaveDispatchCallsAsync(IEnumerable<TrainStretch> dispatchCalls, CancellationToken cancellationToken = default);
