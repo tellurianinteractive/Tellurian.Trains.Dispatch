@@ -33,12 +33,13 @@ public class TrainStretch
     [JsonIgnore]
     private readonly Dictionary<int, Func<bool>> BlockSignalPassageActions = [];
 
-    public IEnumerable<Func<bool>> ArrivalActions => DispatchActions
+    public IEnumerable<(DispatchState,Func<bool>)> ArrivalActions => DispatchActions
         .Where(k => k.Key.IsIn(this.ArrivalStates))
-        .Select(k => k.Value);
-    public IEnumerable<Func<bool>> DepartureActions => DispatchActions
+        .Select(k => (k.Key, k.Value));
+
+    public IEnumerable<(DispatchState, Func<bool>)> DepartureActions => DispatchActions
         .Where(k => k.Key.IsIn(this.DepartureStates))
-        .Select(k => k.Value);
+        .Select(k => (k.Key,k.Value));
 
     /// <summary>
     /// Gets block signal passage actions for the specified dispatcher.

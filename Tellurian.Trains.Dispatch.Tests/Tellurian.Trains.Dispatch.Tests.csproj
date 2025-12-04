@@ -1,0 +1,13 @@
+﻿<Project Sdk="MSTest.Sdk/4.0.1">
+
+  <PropertyGroup>
+	  <AssemblyName>Tellurian.Trains.Dispatch.Tests</AssemblyName>
+	  <RootNamespace>Tellurian.Trains.Dispatch.Tests</RootNamespace>
+	  <TestingExtensionsProfile>AllMicrosoft</TestingExtensionsProfile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tellurian.Trains.Dispatch\Tellurian.Trains.Dispatch.csproj" />
+  </ItemGroup>
+
+</Project>
