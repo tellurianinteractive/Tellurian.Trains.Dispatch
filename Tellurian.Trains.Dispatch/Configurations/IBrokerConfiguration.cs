@@ -1,6 +1,4 @@
-﻿
-using System.Collections;
-using Tellurian.Trains.Dispatch.Trains;
+﻿using Tellurian.Trains.Dispatch.Trains;
 
 namespace Tellurian.Trains.Dispatch.Configurations;
 
@@ -12,7 +10,16 @@ public interface IBrokerConfiguration
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task<IEnumerable<TrainStationCall>> GetTrainStationCallsAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Gets all <see cref="Station">stations</see> that are manned and have the role of <see cref="StationDispatcher"/>.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     Task<IEnumerable<Station>> GetStationsAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Gets all <see cref="DispatchStretch">dispatch stretches</see> including evenyally <see cref="BlockSignal">block signals</see>
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     Task<IEnumerable<DispatchStretch>> GetTrackStretchesAsync(CancellationToken cancellationToken = default);
-    Task<IEnumerable<BlockSignal>> GetBlockSignalsAsync(CancellationToken cancellationToken = default);
 }

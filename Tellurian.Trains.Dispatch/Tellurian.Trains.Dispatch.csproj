@@ -4,12 +4,30 @@
 		<AssemblyName>Tellurian.Trains.Dispatch</AssemblyName>
 		<RootNamespace>Tellurian.Trains.Dispatch</RootNamespace>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<Title>$(AssemblyName)</Title>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/tellurianinteractive/Tellurian.Trains.Dispatch</RepositoryUrl>
+		<PackageTags>Model railway, Train dispatch</PackageTags>
+		<PackageProjectUrl>https://github.com/tellurianinteractive/Tellurian.Trains.Dispatch</PackageProjectUrl>
+		<Copyright>Stefan Fjällemark, Sweden</Copyright>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<IsTrimmable>True</IsTrimmable>
 		<IsAotCompatible>True</IsAotCompatible>
+		<DebugType>portable</DebugType>
 	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <DebugType>portable</DebugType>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Include="..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />

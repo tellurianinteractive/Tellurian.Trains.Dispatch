@@ -30,12 +30,38 @@ public class TrainStretch
     private readonly Dictionary<TrainState, Func<bool>> TrainActions = [];
     [JsonIgnore]
     private readonly Dictionary<DispatchState, Func<bool>> DispatchActions = [];
+    [JsonIgnore]
+    private readonly Dictionary<int, Func<bool>> BlockSignalPassageActions = [];
+
     public IEnumerable<Func<bool>> ArrivalActions => DispatchActions
-        .Where(k => k.Key.IsIn(State.NextArrivalStates))
+        .Where(k => k.Key.IsIn(this.ArrivalStates))
         .Select(k => k.Value);
     public IEnumerable<Func<bool>> DepartureActions => DispatchActions
-        .Where(k => k.Key.IsIn(State.NextDepartureStates))
+        .Where(k => k.Key.IsIn(this.DepartureStates))
         .Select(k => k.Value);
+
+    /// <summary>
+    /// Gets block signal passage actions for the specified dispatcher.
+    /// Only returns actions for block signals controlled by this dispatcher
+    /// that are the next in sequence to be passed.
+    /// </summary>
+    public IEnumerable<Func<bool>> GetBlockSignalActionsFor(IDispatcher dispatcher) =>
+        BlockSignalPassageActions
+            .Where(kvp =>
+                kvp.Key == this.CurrentBlockIndex &&
+                kvp.Key < BlockSignalPassages.Count &&
+                BlockSignalPassages[kvp.Key].IsExpected &&
+                BlockSignalPassages[kvp.Key].BlockSignal.ControlledBy.Name == dispatcher.Name)
+            .Select(kvp => kvp.Value);
+
+    /// <summary>
+    /// Gets the clear action if available.
+    /// Only available when the train is canceled/aborted and on the stretch (Departed state).
+    /// </summary>
+    public Func<bool>? ClearCanceledOrAbortedTrain =>
+        this.Train.IsCanceledOrAborted && State == DispatchState.Departed
+            ? this.ClearFromStretch
+            : null;
 
     private TrainStretch(DispatchStretch dispatchStretch, TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider)
     {
@@ -44,6 +70,7 @@ public class TrainStretch
         Departure = departure;
         Arrival = arrival;
         State = DispatchState.None;
+        BlockSignalPassages = [.. this.CreateBlockSignalPassages()];
         CreateActionDictionaries();
     }
     /// <summary>
@@ -53,18 +80,16 @@ public class TrainStretch
     /// <param name="departure"></param>
     /// <param name="arrival"></param>
     /// <returns></returns>
-    public static Option<TrainStretch> Create(DispatchStretch dispatchStretch, TrainStationCall departure, TrainStationCall arrival,  ITimeProvider timeProvider)
+    public static Option<TrainStretch> Create(DispatchStretch dispatchStretch, TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider)
     {
         if (dispatchStretch.CanHave(departure, arrival))
         {
             var trainStretch = new TrainStretch(dispatchStretch, departure, arrival, timeProvider);
-            trainStretch.BlockSignalPassages = [.. trainStretch.CreateBlockSignalPassages()];
             return Option<TrainStretch>.Success(trainStretch);
         }
         else if (dispatchStretch.Reverse.CanHave(departure, arrival))
         {
             var trainStretch = new TrainStretch(dispatchStretch.Reverse, departure, arrival, timeProvider);
-            trainStretch.BlockSignalPassages = [.. trainStretch.CreateBlockSignalPassages()];
             return Option<TrainStretch>.Success(trainStretch);
         }
         else
@@ -85,5 +110,12 @@ public class TrainStretch
         DispatchActions.Add(DispatchState.Revoked, this.Revoke);
         DispatchActions.Add(DispatchState.Departed, this.Departed);
         DispatchActions.Add(DispatchState.Arrived, this.Arrived);
+
+        // Add block signal passage actions
+        for (int i = 0; i < BlockSignalPassages.Count; i++)
+        {
+            var index = i; // capture for closure
+            BlockSignalPassageActions.Add(index, () => this.PassBlockSignal(index));
+        }
     }
 }

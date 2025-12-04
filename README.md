@@ -29,7 +29,11 @@ The track section between two adjacent stations. A DispatchStretch has:
 Represents a train's scheduled movement over a DispatchStretch, connecting a departure call at one station to an arrival call at the next. This is the primary unit for dispatch operations.
 
 ### Block Signals
-Intermediate signal points on a DispatchStretch. When present, they allow multiple trains to occupy the same stretch simultaneously (with safe separation), increasing effective capacity.
+Intermediate signal points on a DispatchStretch that divide the stretch into blocks (segments). When present, they allow multiple trains to occupy the same stretch simultaneously, but only one train per block:
+- N block signals create N+1 blocks
+- A train occupies one block at a time
+- When a train passes a block signal, it moves to the next block, freeing the previous one
+- Each block signal is controlled by a dispatcher who confirms when a train passes
 
 ## Train Lifecycle
 
@@ -48,10 +52,13 @@ Each TrainStretch follows this dispatch workflow:
 
 1. **Requested** - Departure station requests permission to dispatch
 2. **Accepted** or **Rejected** - Arrival station responds based on capacity and conditions
-3. **Departed** - Train has left the departure station
-4. **Arrived** - Train has arrived at the destination station
+3. **Departed** - Train has left the departure station (occupies first block)
+4. **Block Signal Passages** - If block signals exist, the controlling dispatcher marks each passage in sequence
+5. **Arrived** - Train has arrived at the destination station (only after all block signals passed)
 
 An accepted request can be **Revoked** before departure if circumstances change.
+
+If a train is canceled or aborted while on the stretch, it must be manually cleared to free the block it occupies.
 
 ## Integration Interfaces
 

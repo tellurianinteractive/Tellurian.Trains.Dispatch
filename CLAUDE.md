@@ -21,7 +21,23 @@ This is a .NET library for dispatching trains between stations on a model railwa
 
 ### State Machines
 - **TrainState**: Planned → Manned → Running → [Completed | Canceled | Aborted]
-- **DispatchState**: None → Requested → [Accepted | Rejected] → Departed → Arrived (or Accepted → Revoked)
+- **DispatchState**: None → Requested → [Accepted | Rejected] → Departed → [PassBlockSignal*] → Arrived (or Accepted → Revoked)
+- **BlockPassageState**: Expected → Passed (or Canceled)
+
+### Block Signal Handling
+A DispatchStretch can be divided into blocks by intermediate block signals:
+- **N block signals** create **N+1 blocks** (segments)
+- Each block can hold only **one train** at a time
+- Trains must pass block signals **in sequence**
+- A train's current block index = count of passed BlockSignalPassages
+- Arrival is only allowed after **all block signals have been passed**
+
+Block occupancy determines capacity:
+- When a train departs, it occupies Block 0 (station to first signal)
+- When a dispatcher marks the train as passed a signal, it moves to the next block
+- The previous block is then free for the next train
+
+The dispatcher who controls a block signal (`BlockSignal.ControlledBy`) is presented with the action to mark the passage.
 
 ## Architecture Patterns
 

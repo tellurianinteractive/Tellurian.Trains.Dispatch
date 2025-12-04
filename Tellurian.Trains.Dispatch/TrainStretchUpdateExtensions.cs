@@ -89,6 +89,40 @@ internal static class TrainStretchUpdateExtensions
             return false;
         }
 
+        /// <summary>
+        /// Marks the block signal at the specified index as passed.
+        /// Must be called in sequence - trains pass block signals in order.
+        /// </summary>
+        /// <param name="blockSignalIndex">The index of the block signal (0-based).</param>
+        /// <returns>True if the passage was marked, false if not allowed.</returns>
+        internal bool PassBlockSignal(int blockSignalIndex)
+        {
+            if (trainStretch.State != DispatchState.Departed) return false;
+            if (blockSignalIndex != trainStretch.CurrentBlockIndex) return false;
+            var passage = trainStretch.BlockSignalPassages[blockSignalIndex];
+            if (!passage.IsExpected) return false;
+            passage.State = BlockPassageState.Passed;
+            return true;
+        }
+
+        /// <summary>
+        /// Manually clears an aborted or canceled train from the stretch.
+        /// This frees the block the train was occupying.
+        /// </summary>
+        /// <returns>True if the train was cleared, false if not applicable.</returns>
+        internal bool ClearFromStretch()
+        {
+            if (!trainStretch.Train.IsCanceledOrAborted)                return false;
+            if (trainStretch.State != DispatchState.Departed)                return false;
+            trainStretch.DispatchStretch.ActiveTrains.Remove(trainStretch);
+            foreach (var passage in trainStretch.BlockSignalPassages.Where(p => p.IsExpected))
+            {
+                passage.State = BlockPassageState.Canceled;
+            }
+            trainStretch.State = DispatchState.Canceled;
+            return true;
+        }
+
         private bool TryUpdateState(DispatchState next, bool condition = true)
         {
             if (condition && trainStretch.IsNext(next))

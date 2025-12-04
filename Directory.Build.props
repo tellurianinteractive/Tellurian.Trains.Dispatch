@@ -4,6 +4,22 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<Version>0.9.0</Version>
+		<AssemblyVersion>0.9.0.0</AssemblyVersion>
+		<Authors>Stefan Fjällemark, Tellurian Interactive</Authors>
+	</PropertyGroup>
+	
+	<PropertyGroup>
+		<DebugSymbols>True</DebugSymbols>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+	
+	<PropertyGroup>
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+		<Deterministic>true</Deterministic>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 	<PropertyGroup>

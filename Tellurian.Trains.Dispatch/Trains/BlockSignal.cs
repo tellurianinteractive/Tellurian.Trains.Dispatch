@@ -46,40 +46,51 @@ public enum BlockPassageState
 
 internal static class BlockSignalPassageExtensions
 {
-    extension (IEnumerable<BlockSignalPassage> passages)
+    extension(IEnumerable<BlockSignalPassage> passages)
     {
-        public bool AllCompleted =>  passages.All(p => p.IsPassed || p.IsCanceled);
-        
+        public bool AllCompleted => passages.All(p => p.IsPassed || p.IsCanceled);
+
         public BlockSignalPassage[] Next => [.. passages.Where(p => p.IsExpected)];
-        
-   }
-    extension(BlockSignal blockSignal)
-    {
-        public bool IsOn(TrainStretch stretch) => 
-            stretch.DispatchStretch.IntermediateBlockSignals.Any( p => p.Id == blockSignal.Id);
 
     }
 
-    
-    extension (TrainStretch trainStretch)
+    extension(BlockSignal blockSignal)
     {
-        public IEnumerable<BlockSignalPassage> CreateBlockSignalPassages() =>
+        public bool IsOn(TrainStretch stretch) =>
+            stretch.DispatchStretch.IntermediateBlockSignals.Any(p => p.Id == blockSignal.Id);
+
+    }
+
+    extension(TrainStretch trainStretch)
+    {
+        internal IEnumerable<BlockSignalPassage> CreateBlockSignalPassages() =>
             trainStretch.DispatchStretch.IntermediateBlockSignals
             .Select(p => new BlockSignalPassage(p, trainStretch));
 
+        internal int NumberOfBlocks => trainStretch.DispatchStretch.IntermediateBlockSignals.Count + 1;
+
+        internal int CurrentBlockIndex => trainStretch.BlockSignalPassages.Count(p => p.IsPassed);
+
+
+        internal bool HasPassedAllBlockSignals =>
+            trainStretch.BlockSignalPassages.Count == 0 ||
+            trainStretch.BlockSignalPassages.All(p => p.IsPassed || p.IsCanceled);
+
+        internal BlockSignalPassage? NextBlockSignalToPass =>
+            trainStretch.BlockSignalPassages.FirstOrDefault(p => p.IsExpected);
+
+        internal bool IsInLastBlock => trainStretch.CurrentBlockIndex == trainStretch.NumberOfBlocks - 1;
     }
+
     extension(BlockSignalPassage[] passages)
     {
         public int NumberOfPassages => passages.Length;
     }
 
-    extension(BlockSignalPassage passage) { 
+    extension(BlockSignalPassage passage)
+    {
         public bool IsPassed => passage.State == BlockPassageState.Passed;
         public bool IsCanceled => passage.State == BlockPassageState.Canceled;
         public bool IsExpected => passage.State == BlockPassageState.Expected;
-
-
-
-        
     }
 }

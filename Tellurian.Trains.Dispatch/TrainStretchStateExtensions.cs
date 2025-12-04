@@ -24,6 +24,32 @@ internal static class TrainStretchStateExtensions
             _ => []
         };
 
+        /// <summary>
+        /// States available for the arrival dispatcher.
+        /// Arrived is only available after all block signals have been passed.
+        /// </summary>
+        public DispatchState[] ArrivalStates => trainStretch.State switch
+        {
+            _ when trainStretch.Train.IsCanceledOrAborted => [],
+            DispatchState.Requested => [DispatchState.Accepted, DispatchState.Rejected],
+            DispatchState.Departed when trainStretch.HasPassedAllBlockSignals => [DispatchState.Arrived],
+            _ => []
+        };
+
+        /// <summary>
+        /// States available for the departure dispatcher.
+        /// </summary>
+        public DispatchState[] DepartureStates => trainStretch.State switch
+        {
+            _ when trainStretch.Train.IsCanceledOrAborted => [],
+            DispatchState.None or
+            DispatchState.Rejected or
+            DispatchState.Revoked => [DispatchState.Requested],
+            DispatchState.Requested => [DispatchState.Revoked],
+            DispatchState.Accepted => [DispatchState.Departed, DispatchState.Revoked],
+            _ => []
+        };
+
         public TrainState[] NextTrainStates => trainStretch.Train.State switch
         {
             _ when trainStretch.IsLast && trainStretch.IsCompleted => [TrainState.Completed],

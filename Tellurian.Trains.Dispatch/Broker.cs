@@ -11,22 +11,19 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
     private readonly IBrokerStateProvider _stateProvider = stateProvider;
     private readonly ILogger<Broker> _logger = logger;
 
-    private IEnumerable<Station> _stations = [];
-    private IEnumerable<DispatchStretch> _trackStreches = [];
-    private IEnumerable<BlockSignal> _blockSignals = [];
-    private Dictionary<int, TrainStretch> _dispatchTrains = [];
+    private Dictionary<int, TrainStretch> _trainStretches = [];
     private Dictionary<string, StationDispatcher> _dispatchers = [];
-    private Task<bool> Persist() => _stateProvider.SaveDispatchCallsAsync(_dispatchTrains.Values);
+    private Task<bool> Persist() => _stateProvider.SaveDispatchCallsAsync(_trainStretches.Values);
 
     public ITimeProvider TimeProvider { get; } = timeProvider;
 
     public IEnumerable<TrainStretch> GetArrivalsFor(Station? station, int maxItems) =>
-            _dispatchTrains.Values
+            _trainStretches.Values
             .Where(dt => dt.IsVisibleForDispatcher && (station is null || dt.To.Equals(station)))
             .Take(maxItems);
 
     public IEnumerable<TrainStretch> GetDeparturesFor(Station? station, int maxItems) =>
-        _dispatchTrains.Values
+        _trainStretches.Values
         .Where(dt => dt.IsVisibleForDispatcher && (station is null || dt.From.Equals(station)))
         .Take(maxItems);
 
@@ -34,21 +31,19 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
 
     public async Task InitAsync(bool isRestart, CancellationToken cancellationToken = default)
     {
-        _stations = await _configuration.GetStationsAsync(cancellationToken).ConfigureAwait(false);
-        _trackStreches = await _configuration.GetTrackStretchesAsync(cancellationToken).ConfigureAwait(false);
-        _blockSignals = await _configuration.GetBlockSignalsAsync(cancellationToken).ConfigureAwait(false);
-        _dispatchers = _stations.Select(s => new StationDispatcher(s, this)).ToDictionary(d => d.Name);
+        var stations = await _configuration.GetStationsAsync(cancellationToken).ConfigureAwait(false);
+        _dispatchers = stations.Select(s => new StationDispatcher(s, this)).ToDictionary(d => d.Name);
         if (isRestart)
         {
             var dispatchCalls = await _stateProvider.ReadDispatchCallsAsync(cancellationToken).ConfigureAwait(false);
-            _dispatchTrains = dispatchCalls.ToDictionary(d => d.Id);
+            _trainStretches = dispatchCalls.ToDictionary(d => d.Id);
         }
         else
         {
+            var trackStretches = await _configuration.GetTrackStretchesAsync(cancellationToken).ConfigureAwait(false);
             var calls = await _configuration.GetTrainStationCallsAsync(cancellationToken).ConfigureAwait(false);
-            _dispatchTrains = calls.ToDispatchSections(_trackStreches, TimeProvider, _logger).ToDictionary(c => c.Id);
+            _trainStretches = calls.ToDispatchSections(trackStretches, TimeProvider, _logger).ToDictionary(c => c.Id);
             var result = await Persist();
         }
     }
-
 }

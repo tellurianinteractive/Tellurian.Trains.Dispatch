@@ -18,13 +18,17 @@
         extension(DispatchState state)
         {
             internal bool IsIn(DispatchState[] states) => states.Contains(state);
-
+            /// <summary>
+            /// Determines what possible next states that can be acted on at the arriving station.
+            /// </summary>
             internal DispatchState[] NextArrivalStates => state switch {
                 DispatchState.Requested => [DispatchState.Accepted, DispatchState.Rejected],
                 DispatchState.Departed => [DispatchState.Arrived],
                 _ => [],
             };
-
+            /// <summary>
+            /// Determines what possible next states that can be acted on at the departing station.
+            /// </summary>
             internal DispatchState[] NextDepartureStates => state switch {
                 DispatchState.None or
                 DispatchState.Rejected or
