@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<AssemblyName>Tellurian.Trains.Dispatch</AssemblyName>
+		<RootNamespace>Tellurian.Trains.Dispatch</RootNamespace>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Orleans.Sdk" Version="9.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Tellurian.Trains.Dispatch\Tellurian.Trains.Dispatch.csproj" />
+	</ItemGroup>
+
+</Project>

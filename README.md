@@ -1,0 +1,77 @@
+# Tellurian.Trains.Dispatch
+
+A .NET library for dispatching trains between stations on a model railway.
+
+## Overview
+
+This library provides the core domain model and business logic for managing train dispatching operations. It tracks trains as they move between stations, manages dispatch requests and approvals, and handles capacity constraints on track sections.
+
+The library is designed to be integrated into larger applications that provide the user interface, persistence, and time management.
+
+## Core Concepts
+
+### Broker
+The central singleton component that maintains the state of all trains and their station calls. It manages track sections (DispatchStretch) and station dispatchers, providing a unified view of the railway network.
+
+### Station and StationDispatcher
+A Station represents a named location on the railway with one or more tracks. Each station has an associated StationDispatcher that presents arrivals and departures for that station.
+
+### Train
+A train is identified by its operating company and identity (train number). Each train has a sequence of TrainStretch sections representing its journey across the network.
+
+### DispatchStretch
+The track section between two adjacent stations. A DispatchStretch has:
+- Capacity defined by number of tracks (single, double, etc.)
+- Optional intermediate block signals for finer capacity control
+- Support for bidirectional operation
+
+### TrainStretch
+Represents a train's scheduled movement over a DispatchStretch, connecting a departure call at one station to an arrival call at the next. This is the primary unit for dispatch operations.
+
+### Block Signals
+Intermediate signal points on a DispatchStretch. When present, they allow multiple trains to occupy the same stretch simultaneously (with safe separation), increasing effective capacity.
+
+## Train Lifecycle
+
+A train progresses through these states:
+
+1. **Planned** - Initial state when the train is scheduled
+2. **Manned** - Crew has been assigned and train is ready
+3. **Running** - Train is actively operating
+4. **Completed** - Train has finished its journey
+
+Alternative endings: **Canceled** (before running) or **Aborted** (during operation)
+
+## Dispatch Workflow
+
+Each TrainStretch follows this dispatch workflow:
+
+1. **Requested** - Departure station requests permission to dispatch
+2. **Accepted** or **Rejected** - Arrival station responds based on capacity and conditions
+3. **Departed** - Train has left the departure station
+4. **Arrived** - Train has arrived at the destination station
+
+An accepted request can be **Revoked** before departure if circumstances change.
+
+## Integration Interfaces
+
+To integrate this library, implement these interfaces:
+
+### IBrokerConfiguration
+Provides initial data loading:
+- Station definitions
+- Track stretch definitions
+- Block signal definitions
+- Scheduled train station calls
+
+### IBrokerStateProvider
+Handles persistence:
+- Save current dispatch state
+- Restore state on restart
+
+### ITimeProvider
+Supplies the current time (typically from a fast clock for model railway operation).
+
+## License
+
+This library is licensed under GPL-3.0.
