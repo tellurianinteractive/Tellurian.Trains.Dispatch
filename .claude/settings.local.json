@@ -4,7 +4,9 @@
       "Bash(dir:*)",
       "Bash(git mv:*)",
       "Bash(dotnet build:*)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "mcp__microsoft-learn__microsoft_docs_search",
+      "mcp__microsoft-learn__microsoft_docs_fetch"
     ],
     "deny": [],
     "ask": []

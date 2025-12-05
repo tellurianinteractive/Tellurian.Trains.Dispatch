@@ -3,6 +3,7 @@
     <File Path="CLAUDE.md" />
     <File Path="Directory.Build.props" />
     <File Path="README.md" />
+    <File Path="SPECIFICATION.md" />
   </Folder>
   <Project Path="Tellurian.Trains.Dispatch.Tests/Tellurian.Trains.Dispatch.Tests.csproj" Id="57b54aab-a7ca-4e9f-aaba-60929951ad80" />
   <Project Path="Tellurian.Trains.Dispatch/Tellurian.Trains.Dispatch.csproj" />
