@@ -1,4 +1,6 @@
-﻿namespace Tellurian.Trains.Dispatch
+﻿using Tellurian.Trains.Dispatch;
+
+namespace Tellurian.Trains.Dispatch
 {
     public enum DispatchState
     {

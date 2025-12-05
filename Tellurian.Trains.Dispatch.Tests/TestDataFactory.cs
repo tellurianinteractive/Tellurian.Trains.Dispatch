@@ -1,4 +1,7 @@
-﻿using Tellurian.Trains.Dispatch.Configurations;
+﻿using Tellurian.Trains.Dispatch;
+using Tellurian.Trains.Dispatch.Brokers;
+using Tellurian.Trains.Dispatch.Configurations;
+using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 
 namespace Tellurian.Trains.Dispatch.Tests;
@@ -129,8 +132,8 @@ internal class BlockSignalDispatchConfiguration : IBrokerConfiguration
 internal class BlockSignalControllerReference(string name) : IDispatcher
 {
     public string Name { get; } = name;
-    public IEnumerable<TrainStretch> Departures => throw new NotSupportedException("Use StationDispatcher from Broker");
-    public IEnumerable<TrainStretch> Arrivals => throw new NotSupportedException("Use StationDispatcher from Broker");
+    public IEnumerable<TrainSection> Departures => throw new NotSupportedException("Use StationDispatcher from Broker");
+    public IEnumerable<TrainSection> Arrivals => throw new NotSupportedException("Use StationDispatcher from Broker");
 }
 
 /// <summary>
@@ -141,10 +144,10 @@ internal class BlockSignalControllerReference(string name) : IDispatcher
 /// </remarks>
 internal class InMemoryStateProvider : IBrokerStateProvider
 {
-    private readonly List<TrainStretch> _savedStretches = [];
+    private readonly List<TrainSection> _savedStretches = [];
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public async Task<IEnumerable<TrainStretch>> ReadDispatchCallsAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<TrainSection>> ReadDispatchCallsAsync(CancellationToken cancellationToken = default)
     {
         await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -157,7 +160,7 @@ internal class InMemoryStateProvider : IBrokerStateProvider
         }
     }
 
-    public Task<bool> SaveDispatchCallsAsync(IEnumerable<TrainStretch> dispatchCalls, CancellationToken cancellationToken = default)
+    public Task<bool> SaveDispatchCallsAsync(IEnumerable<TrainSection> dispatchCalls, CancellationToken cancellationToken = default)
     {
         if (!_semaphore.Wait(0, cancellationToken))
             return Task.FromResult(false);

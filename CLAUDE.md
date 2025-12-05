@@ -11,11 +11,11 @@ This is a .NET library for dispatching trains between stations on a model railwa
 ## Domain Model Concepts
 
 ### Core Entities
-- **Train** - Identified by Company and Identity (e.g., "SJ IC 123"). Has a collection of TrainStretch sections.
+- **Train** - Identified by Company and Identity (e.g., "SJ IC 123"). Has a collection of TrainSection sections.
 - **Station** - A named location with a signature. Can be manned or unmanned.
 - **StationTrack** - A specific track/platform at a station.
 - **DispatchStretch** - The track section between two adjacent stations. Has capacity (single/double track) and optional block signals.
-- **TrainStretch** - A train's scheduled movement over a DispatchStretch, with departure and arrival calls.
+- **TrainSection** - A train's scheduled movement over a DispatchStretch, with departure and arrival calls.
 - **TrainStationCall** - A scheduled stop: train, station, track, and call times.
 - **BlockSignal** - Intermediate signal point on a DispatchStretch, enabling finer capacity control.
 
@@ -51,7 +51,7 @@ The dispatcher who controls a block signal (`BlockSignal.ControlledBy`) is prese
 Broker (singleton) manages:
 - Collection of DispatchStretch (track sections)
 - Collection of StationDispatcher (one per station)
-- TrainStretch instances representing active dispatching
+- TrainSection instances representing active dispatching
 
 StationDispatcher exposes arrivals and departures for its station by querying the Broker.
 

@@ -4,22 +4,22 @@ using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch;
 
-internal static class TrainStretchStateExtensions
+internal static class TrainSectionStateExtensions
 {
-    extension(TrainStretch trainStretch)
+    extension(TrainSection trainSection)
     {
-        public bool IsVisibleForDispatcher => !trainStretch.IsCompleted;
-        public bool IsCompleted => trainStretch.State == DispatchState.Arrived;
-        public bool IsInProgress => trainStretch.Train.IsNotCancelledOrAborted && trainStretch.State != DispatchState.None;
+        public bool IsVisibleForDispatcher => !trainSection.IsCompleted;
+        public bool IsCompleted => trainSection.State == DispatchState.Arrived;
+        public bool IsInProgress => trainSection.Train.IsNotCancelledOrAborted && trainSection.State != DispatchState.None;
 
-        public DispatchState[] NextDispatchStates => trainStretch.State switch
+        public DispatchState[] NextDispatchStates => trainSection.State switch
         {
-            _ when trainStretch.Train.IsCanceledOrAborted => [],
+            _ when trainSection.Train.IsCanceledOrAborted => [],
             DispatchState.None or
             DispatchState.Rejected or
             DispatchState.Revoked => [DispatchState.Requested],
             DispatchState.Requested => [DispatchState.Accepted, DispatchState.Rejected],
-            DispatchState.Accepted when trainStretch.CannotProceed => [DispatchState.Revoked],
+            DispatchState.Accepted when trainSection.CannotProceed => [DispatchState.Revoked],
             DispatchState.Accepted => [DispatchState.Revoked, DispatchState.Departed],
             _ => []
         };
@@ -28,20 +28,20 @@ internal static class TrainStretchStateExtensions
         /// States available for the arrival dispatcher.
         /// Arrived is only available after all block signals have been passed.
         /// </summary>
-        public DispatchState[] ArrivalStates => trainStretch.State switch
+        public DispatchState[] ArrivalStates => trainSection.State switch
         {
-            _ when trainStretch.Train.IsCanceledOrAborted => [],
+            _ when trainSection.Train.IsCanceledOrAborted => [],
             DispatchState.Requested => [DispatchState.Accepted, DispatchState.Rejected],
-            DispatchState.Departed when trainStretch.HasPassedAllBlockSignals => [DispatchState.Arrived],
+            DispatchState.Departed when trainSection.HasPassedAllBlockSignals => [DispatchState.Arrived],
             _ => []
         };
 
         /// <summary>
         /// States available for the departure dispatcher.
         /// </summary>
-        public DispatchState[] DepartureStates => trainStretch.State switch
+        public DispatchState[] DepartureStates => trainSection.State switch
         {
-            _ when trainStretch.Train.IsCanceledOrAborted => [],
+            _ when trainSection.Train.IsCanceledOrAborted => [],
             DispatchState.None or
             DispatchState.Rejected or
             DispatchState.Revoked => [DispatchState.Requested],
@@ -50,9 +50,9 @@ internal static class TrainStretchStateExtensions
             _ => []
         };
 
-        public TrainState[] NextTrainStates => trainStretch.Train.State switch
+        public TrainState[] NextTrainStates => trainSection.Train.State switch
         {
-            _ when trainStretch.IsLast && trainStretch.IsCompleted => [TrainState.Completed],
+            _ when trainSection.IsLast && trainSection.IsCompleted => [TrainState.Completed],
             TrainState.Planned => [TrainState.Manned, TrainState.Canceled],
             TrainState.Manned => [TrainState.Running, TrainState.Canceled],
             TrainState.Running => [TrainState.Aborted],
@@ -61,14 +61,14 @@ internal static class TrainStretchStateExtensions
         };
 
         public bool IsNext(DispatchState next) =>
-            trainStretch.NextDispatchStates.Contains(next);
+            trainSection.NextDispatchStates.Contains(next);
 
         public bool IsNext(TrainState next) =>
-            trainStretch.NextTrainStates.Contains(next);
+            trainSection.NextTrainStates.Contains(next);
 
         public void SetDepartureTime() =>
-            trainStretch.Departure.SetDepartureTime(trainStretch.TimeProvider.Time(trainStretch.Departure.Scheduled.DepartureTime));
+            trainSection.Departure.SetDepartureTime(trainSection.TimeProvider.Time(trainSection.Departure.Scheduled.DepartureTime));
         public void SetArrivalTime() =>
-            trainStretch.Arrival.SetArrivalTime(trainStretch.TimeProvider.Time(trainStretch.Departure.Scheduled.ArrivalTime));
+            trainSection.Arrival.SetArrivalTime(trainSection.TimeProvider.Time(trainSection.Departure.Scheduled.ArrivalTime));
     }
 }

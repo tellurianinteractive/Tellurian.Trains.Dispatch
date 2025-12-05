@@ -17,7 +17,7 @@ The central singleton component that maintains the state of all trains and their
 A Station represents a named location on the railway with one or more tracks. Each station has an associated StationDispatcher that presents arrivals and departures for that station.
 
 ### Train
-A train is identified by its operating company and identity (train number). Each train has a sequence of TrainStretch sections representing its journey across the network.
+A train is identified by its operating company and identity (train number). Each train has a sequence of TrainSection sections representing its journey across the network.
 
 ### DispatchStretch
 The track section between two adjacent stations. A DispatchStretch has:
@@ -25,7 +25,7 @@ The track section between two adjacent stations. A DispatchStretch has:
 - Optional intermediate block signals for finer capacity control
 - Support for bidirectional operation
 
-### TrainStretch
+### TrainSection
 Represents a train's scheduled movement over a DispatchStretch, connecting a departure call at one station to an arrival call at the next. This is the primary unit for dispatch operations.
 
 ### Block Signals
@@ -60,7 +60,7 @@ Alternative endings: **Canceled** (before running) or **Aborted** (during operat
 
 ## Dispatch Workflow
 
-Each TrainStretch follows this dispatch workflow:
+Each TrainSection follows this dispatch workflow:
 
 1. **Requested** - Departure dispatcher requests permission to dispatch
 2. **Accepted** or **Rejected** - Arrival dispatcher responds based on capacity and conditions

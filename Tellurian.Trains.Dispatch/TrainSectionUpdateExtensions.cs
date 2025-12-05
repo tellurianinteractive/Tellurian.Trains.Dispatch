@@ -1,40 +1,41 @@
 ﻿using Tellurian.Trains.Dispatch;
+using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch;
 
-internal static class TrainStretchUpdateExtensions
+internal static class TrainSectionUpdateExtensions
 {
-    extension(TrainStretch trainStretch)
+    extension(TrainSection trainSection)
     {
         internal bool SetManned()
         {
-            return TryUpdateState(trainStretch, TrainState.Manned);
+            return TryUpdateState(trainSection, TrainState.Manned);
         }
         internal bool SetRunning()
         {
-            return TryUpdateState(trainStretch, TrainState.Running, condition: trainStretch.IsFirst);
+            return TryUpdateState(trainSection, TrainState.Running, condition: trainSection.IsFirst);
         }
         internal bool SetCanceled()
         {
-            return TryUpdateState(trainStretch, TrainState.Canceled);
+            return TryUpdateState(trainSection, TrainState.Canceled);
         }
         internal bool SetAborted()
         {
-            return TryUpdateState(trainStretch, TrainState.Aborted);
+            return TryUpdateState(trainSection, TrainState.Aborted);
         }
         internal bool TrySetCompleted()
         {
-            return TryUpdateState(trainStretch, TrainState.Completed, condition: trainStretch.IsLast && trainStretch.IsCompleted);
+            return TryUpdateState(trainSection, TrainState.Completed, condition: trainSection.IsLast && trainSection.IsCompleted);
         }
 
         private bool TryUpdateState(TrainState next, bool condition = true)
         {
-            if (condition && trainStretch.IsNext(next))
+            if (condition && trainSection.IsNext(next))
             {
-                if (trainStretch.Train.IsCanceledOrAborted) trainStretch.State = DispatchState.Canceled;
-                else trainStretch.Train.State = next;
+                if (trainSection.Train.IsCanceledOrAborted) trainSection.State = DispatchState.Canceled;
+                else trainSection.Train.State = next;
                 return true;
             }
             return false;
@@ -42,9 +43,9 @@ internal static class TrainStretchUpdateExtensions
 
         internal bool Request()
         {
-            if (TryUpdateState(trainStretch, DispatchState.Requested))
+            if (TryUpdateState(trainSection, DispatchState.Requested))
             {
-                trainStretch.SetManned();
+                trainSection.SetManned();
                 return true;
             }
             return false;
@@ -52,25 +53,25 @@ internal static class TrainStretchUpdateExtensions
 
         internal bool Accept()
         {
-            return TryUpdateState(trainStretch, DispatchState.Accepted);
+            return TryUpdateState(trainSection, DispatchState.Accepted);
         }
 
         internal bool Reject()
         {
-            return TryUpdateState(trainStretch, DispatchState.Rejected);
+            return TryUpdateState(trainSection, DispatchState.Rejected);
         }
 
         internal bool Revoke()
         {
-            return TryUpdateState(trainStretch, DispatchState.Revoked);
+            return TryUpdateState(trainSection, DispatchState.Revoked);
         }
 
         internal bool Departed()
         {
-            if (TryUpdateState(trainStretch, DispatchState.Departed))
+            if (TryUpdateState(trainSection, DispatchState.Departed))
             {
-                trainStretch.SetDepartureTime();
-                trainStretch.SetRunning();
+                trainSection.SetDepartureTime();
+                trainSection.SetRunning();
                 return true;
             }
             return false;
@@ -79,10 +80,10 @@ internal static class TrainStretchUpdateExtensions
 
         internal bool Arrived()
         {
-            if (TryUpdateState(trainStretch, DispatchState.Arrived))
+            if (TryUpdateState(trainSection, DispatchState.Arrived))
             {
-                trainStretch.SetArrivalTime();
-                trainStretch.TrySetCompleted();
+                trainSection.SetArrivalTime();
+                trainSection.TrySetCompleted();
                 return true;
 
             }
@@ -97,11 +98,11 @@ internal static class TrainStretchUpdateExtensions
         /// <returns>True if the passage was marked, false if not allowed.</returns>
         internal bool PassBlockSignal(int blockSignalIndex)
         {
-            if (trainStretch.State != DispatchState.Departed) return false;
-            if (blockSignalIndex != trainStretch.CurrentBlockIndex) return false;
-            var passage = trainStretch.BlockSignalPassages[blockSignalIndex];
+            if (trainSection.State != DispatchState.Departed) return false;
+            if (blockSignalIndex != trainSection.CurrentBlockIndex) return false;
+            var passage = trainSection.BlockSignalPassages[blockSignalIndex];
             if (!passage.IsExpected) return false;
-            passage.State = BlockPassageState.Passed;
+            passage.State = BlockSignalPassageState.Passed;
             return true;
         }
 
@@ -112,23 +113,23 @@ internal static class TrainStretchUpdateExtensions
         /// <returns>True if the train was cleared, false if not applicable.</returns>
         internal bool ClearFromStretch()
         {
-            if (!trainStretch.Train.IsCanceledOrAborted)                return false;
-            if (trainStretch.State != DispatchState.Departed)                return false;
-            trainStretch.DispatchStretch.ActiveTrains.Remove(trainStretch);
-            foreach (var passage in trainStretch.BlockSignalPassages.Where(p => p.IsExpected))
+            if (!trainSection.Train.IsCanceledOrAborted) return false;
+            if (trainSection.State != DispatchState.Departed) return false;
+            trainSection.DispatchStretch.ActiveTrains.Remove(trainSection);
+            foreach (var passage in trainSection.BlockSignalPassages.Where(p => p.IsExpected))
             {
-                passage.State = BlockPassageState.Canceled;
+                passage.State = BlockSignalPassageState.Canceled;
             }
-            trainStretch.State = DispatchState.Canceled;
+            trainSection.State = DispatchState.Canceled;
             return true;
         }
 
         private bool TryUpdateState(DispatchState next, bool condition = true)
         {
-            if (condition && trainStretch.IsNext(next))
+            if (condition && trainSection.IsNext(next))
             {
-                if (trainStretch.Train.IsCanceledOrAborted) trainStretch.State = DispatchState.Canceled;
-                else trainStretch.State = next;
+                if (trainSection.Train.IsCanceledOrAborted) trainSection.State = DispatchState.Canceled;
+                else trainSection.State = next;
                 return true;
             }
             return false;

@@ -1,32 +1,33 @@
 ﻿using Tellurian.Trains.Dispatch;
+using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch;
 
-public static class TrainStretchExtensions
+public static class TrainSectionExtensions
 {
-    extension(TrainStretch trainStretch)
+    extension(TrainSection trainSection)
     {
-        public Station From => trainStretch.From;
-        public Station To => trainStretch.To;
-        public TimeSpan DepartureTime => trainStretch.Departure.Scheduled.DepartureTime;
-        public TimeSpan ArrivalTime => trainStretch.Arrival.Scheduled.ArrivalTime;
-        public int TrainDirection => trainStretch.DispatchStretch.IsReverse ? 2 : 1;
-        internal Train Train => trainStretch.Departure.Train;
-        public bool IsFirst => trainStretch.Departure.SequenceNumner == 1;
-        public bool IsLast => trainStretch.Arrival.IsDeparture == false;
+        public Station From => trainSection.From;
+        public Station To => trainSection.To;
+        public TimeSpan DepartureTime => trainSection.Departure.Scheduled.DepartureTime;
+        public TimeSpan ArrivalTime => trainSection.Arrival.Scheduled.ArrivalTime;
+        public StretchDirection TrainDirection => trainSection.StretchDirection.Direction;
+        internal Train Train => trainSection.Departure.Train;
+        public bool IsFirst => trainSection.Departure.SequenceNumner == 1;
+        public bool IsLast => trainSection.Arrival.IsDeparture == false;
 
         internal bool IsRunningForwardOn(DispatchStretch dispatchStretch) =>
-             trainStretch.Departure.At.Equals(dispatchStretch.From) && trainStretch.Arrival.At.Equals(dispatchStretch.To);
+             trainSection.Departure.At.Equals(dispatchStretch.Forward.From) && trainSection.Arrival.At.Equals(dispatchStretch.Forward.To);
 
         internal bool IsRunningReverseOn(DispatchStretch dispatchStretch) =>
-            trainStretch.Departure.At.Equals(dispatchStretch.Reverse.From) && trainStretch.Arrival.At.Equals(dispatchStretch.Reverse.To);
+            trainSection.Departure.At.Equals(dispatchStretch.Reverse.From) && trainSection.Arrival.At.Equals(dispatchStretch.Reverse.To);
 
         internal bool CanProceed =>
-            trainStretch.DispatchStretch.HasFreeTrackFor(trainStretch);
+            trainSection.DispatchStretch.HasFreeTrackFor(trainSection);
 
         internal bool CannotProceed =>
-            !trainStretch.CanProceed;
+            !trainSection.CanProceed;
     }
 }

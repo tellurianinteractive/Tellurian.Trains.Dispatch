@@ -3,7 +3,7 @@ using Tellurian.Trains.Dispatch;
 using Tellurian.Trains.Dispatch.Configurations;
 using Tellurian.Trains.Dispatch.Trains;
 
-namespace Tellurian.Trains.Dispatch;
+namespace Tellurian.Trains.Dispatch.Brokers;
 
 public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider stateProvider, ITimeProvider timeProvider, ILogger<Broker> logger): IBroker
 {
@@ -11,19 +11,19 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
     private readonly IBrokerStateProvider _stateProvider = stateProvider;
     private readonly ILogger<Broker> _logger = logger;
 
-    private Dictionary<int, TrainStretch> _trainStretches = [];
+    private Dictionary<int, TrainSection> _trainSections = [];
     private Dictionary<string, StationDispatcher> _dispatchers = [];
-    private Task<bool> Persist() => _stateProvider.SaveDispatchCallsAsync(_trainStretches.Values);
+    private Task<bool> Persist() => _stateProvider.SaveDispatchCallsAsync(_trainSections.Values);
 
     public ITimeProvider TimeProvider { get; } = timeProvider;
 
-    public IEnumerable<TrainStretch> GetArrivalsFor(Station? station, int maxItems) =>
-            _trainStretches.Values
+    public IEnumerable<TrainSection> GetArrivalsFor(Station? station, int maxItems) =>
+            _trainSections.Values
             .Where(dt => dt.IsVisibleForDispatcher && (station is null || dt.To.Equals(station)))
             .Take(maxItems);
 
-    public IEnumerable<TrainStretch> GetDeparturesFor(Station? station, int maxItems) =>
-        _trainStretches.Values
+    public IEnumerable<TrainSection> GetDeparturesFor(Station? station, int maxItems) =>
+        _trainSections.Values
         .Where(dt => dt.IsVisibleForDispatcher && (station is null || dt.From.Equals(station)))
         .Take(maxItems);
 
@@ -36,13 +36,13 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
         if (isRestart)
         {
             var dispatchCalls = await _stateProvider.ReadDispatchCallsAsync(cancellationToken).ConfigureAwait(false);
-            _trainStretches = dispatchCalls.ToDictionary(d => d.Id);
+            _trainSections = dispatchCalls.ToDictionary(d => d.Id);
         }
         else
         {
             var trackStretches = await _configuration.GetTrackStretchesAsync(cancellationToken).ConfigureAwait(false);
             var calls = await _configuration.GetTrainStationCallsAsync(cancellationToken).ConfigureAwait(false);
-            _trainStretches = calls.ToDispatchSections(trackStretches, TimeProvider, _logger).ToDictionary(c => c.Id);
+            _trainSections = calls.ToDispatchSections(trackStretches, TimeProvider, _logger).ToDictionary(c => c.Id);
             var result = await Persist();
         }
     }

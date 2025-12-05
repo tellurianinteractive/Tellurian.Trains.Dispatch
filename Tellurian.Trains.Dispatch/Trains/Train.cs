@@ -7,7 +7,7 @@ namespace Tellurian.Trains.Dispatch.Trains
         public int Id { get; set { field = value.OrNextId; } }
         public TrainState State { get; set { if (!isRevoke) Previous = field; field = value; } }
         private TrainState? Previous = null;
-        public IList<TrainStretch> Sections { get; } = [];
+        public IList<TrainSection> Sections { get; } = [];
         public void RevokeLastStateChange()
         {
             if (Previous is null) return;
