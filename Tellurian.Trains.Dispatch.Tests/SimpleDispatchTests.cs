@@ -11,10 +11,9 @@ namespace Tellurian.Trains.Dispatch.Tests;
 [TestClass]
 public class SimpleDispatchTests
 {
-    private Broker _broker = null!;
-    private StationDispatcher _departureDispatcher = null!;
-    private StationDispatcher _arrivalDispatcher = null!;
-    private TrainSection _trainSection = null!;
+    private Broker _broker = default!;
+    private StationDispatcher _departureDispatcher = default!;
+    private TrainSection _trainSection = default!;
 
     [TestInitialize]
     public async Task Setup()
@@ -29,7 +28,6 @@ public class SimpleDispatchTests
 
         var dispatchers = _broker.GetDispatchers().Cast<StationDispatcher>().ToList();
         _departureDispatcher = dispatchers.Single(d => d.Name == "Alpha");
-        _arrivalDispatcher = dispatchers.Single(d => d.Name == "Beta");
         _trainSection = _departureDispatcher.Departures.Single();
     }
 
