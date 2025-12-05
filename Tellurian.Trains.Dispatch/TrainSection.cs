@@ -34,11 +34,11 @@ public class TrainSection
     [JsonIgnore]
     private readonly Dictionary<int, Func<bool>> BlockSignalPassageActions = [];
 
-    public IEnumerable<(DispatchState,Func<bool>)> ArrivalActions => DispatchActions
+    public IEnumerable<(DispatchState State,Func<bool> Action)> ArrivalActions => DispatchActions
         .Where(k => k.Key.IsIn(this.ArrivalStates))
         .Select(k => (k.Key, k.Value));
 
-    public IEnumerable<(DispatchState, Func<bool>)> DepartureActions => DispatchActions
+    public IEnumerable<(DispatchState State, Func<bool> Action)> DepartureActions => DispatchActions
         .Where(k => k.Key.IsIn(this.DepartureStates))
         .Select(k => (k.Key,k.Value));
 

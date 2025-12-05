@@ -382,16 +382,16 @@ public class SimpleDispatchTests
     #region Helper Methods
 
     private Func<bool> GetDepartureAction(DispatchState state) =>
-        _trainSection.DepartureActions.Single(a => a.Item1 == state).Item2;
+        _trainSection.DepartureActions.Single(a => a.State == state).Action;
 
     private Func<bool> GetArrivalAction(DispatchState state) =>
-        _trainSection.ArrivalActions.Single(a => a.Item1 == state).Item2;
+        _trainSection.ArrivalActions.Single(a => a.State == state).Action;
 
     private bool HasDepartureAction(DispatchState state) =>
-        _trainSection.DepartureActions.Any(a => a.Item1 == state);
+        _trainSection.DepartureActions.Any(a => a.State == state);
 
     private bool HasArrivalAction(DispatchState state) =>
-        _trainSection.ArrivalActions.Any(a => a.Item1 == state);
+        _trainSection.ArrivalActions.Any(a => a.State == state);
 
     #endregion
 }
