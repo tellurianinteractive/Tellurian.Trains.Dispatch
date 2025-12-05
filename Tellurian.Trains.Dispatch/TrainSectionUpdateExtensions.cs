@@ -70,6 +70,7 @@ internal static class TrainSectionUpdateExtensions
         {
             if (TryUpdateState(trainSection, DispatchState.Departed))
             {
+                trainSection.DispatchStretch.TryAddActiveDispatchTrain(trainSection);
                 trainSection.SetDepartureTime();
                 trainSection.SetRunning();
                 return true;

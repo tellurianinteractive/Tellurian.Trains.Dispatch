@@ -66,10 +66,11 @@ internal static class TrainSectionStateExtensions
             DispatchState.None or
             DispatchState.Rejected or
             DispatchState.Revoked => [DispatchState.Requested],
-            DispatchState.Requested => [DispatchState.Accepted, DispatchState.Rejected],
+            DispatchState.Requested => [DispatchState.Accepted, DispatchState.Rejected, DispatchState.Revoked],
             DispatchState.Accepted when trainSection.CannotProceed => [DispatchState.Revoked],
             DispatchState.Accepted => [DispatchState.Revoked, DispatchState.Departed],
             DispatchState.Departed when trainSection.HasRemaningBlockSignalsToPass() => [DispatchState.Passed],
+            DispatchState.Departed when trainSection.HasPassedAllBlockSignals => [DispatchState.Arrived],
             _ => []
         };
 
@@ -122,6 +123,6 @@ internal static class TrainSectionStateExtensions
         public void SetDepartureTime() =>
             trainSection.Departure.SetDepartureTime(trainSection.TimeProvider.Time(trainSection.Departure.Scheduled.DepartureTime));
         public void SetArrivalTime() =>
-            trainSection.Arrival.SetArrivalTime(trainSection.TimeProvider.Time(trainSection.Departure.Scheduled.ArrivalTime));
+            trainSection.Arrival.SetArrivalTime(trainSection.TimeProvider.Time(trainSection.Arrival.Scheduled.ArrivalTime));
     }
 }

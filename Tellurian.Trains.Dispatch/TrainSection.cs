@@ -71,6 +71,7 @@ public class TrainSection
         Departure = departure;
         Arrival = arrival;
         TimeProvider = timeProvider;
+        CreateActionDictionaries();
     }
     /// <summary>
     /// Creates a <see cref="TrainSection"/>

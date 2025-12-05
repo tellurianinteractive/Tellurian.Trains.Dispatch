@@ -9,8 +9,8 @@ public static class TrainSectionExtensions
 {
     extension(TrainSection trainSection)
     {
-        public Station From => trainSection.From;
-        public Station To => trainSection.To;
+        public Station From => trainSection.StretchDirection.From;
+        public Station To => trainSection.StretchDirection.To;
         public TimeSpan DepartureTime => trainSection.Departure.Scheduled.DepartureTime;
         public TimeSpan ArrivalTime => trainSection.Arrival.Scheduled.ArrivalTime;
         public StretchDirection TrainDirection => trainSection.StretchDirection.Direction;
