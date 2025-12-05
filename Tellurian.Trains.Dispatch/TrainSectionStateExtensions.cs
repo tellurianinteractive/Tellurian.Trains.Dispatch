@@ -37,7 +37,7 @@ internal static class TrainSectionStateExtensions
             var currentIndex = trainSection.CurrentBlockIndex;
             if (currentIndex >= trainSection.BlockSignalPassages.Count) return false;
             var nextPassage = trainSection.BlockSignalPassages[currentIndex];
-            return nextPassage.IsExpected && nextPassage.BlockSignal.ControlledBy.Equals(dispatcher);
+            return nextPassage.IsExpected && nextPassage.BlockSignal.ControlledBy.Id == dispatcher.Id;
         }
 
         /// <summary>
@@ -52,7 +52,7 @@ internal static class TrainSectionStateExtensions
             for (int i = 0; i < currentIndex && i < trainSection.BlockSignalPassages.Count; i++)
             {
                 var passage = trainSection.BlockSignalPassages[i];
-                if (!passage.BlockSignal.ControlledBy.Equals(arrivalDispatcher) && !passage.IsPassed)
+                if (passage.BlockSignal.ControlledBy.Id != arrivalDispatcher.Id && !passage.IsPassed)
                     return false;
             }
             return true;

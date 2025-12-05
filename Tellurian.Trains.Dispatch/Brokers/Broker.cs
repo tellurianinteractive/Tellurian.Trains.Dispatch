@@ -33,10 +33,13 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
     {
         var stations = await _configuration.GetStationsAsync(cancellationToken).ConfigureAwait(false);
         _dispatchers = stations.Select(s => new StationDispatcher(s, this)).ToDictionary(d => d.Id);
-        foreach (var station in stations) { 
+        foreach (var station in stations) {
             station.Dispatcher = _dispatchers[station.Id];
         }
-        
+
+        var trackStretches = await _configuration.GetTrackStretchesAsync(cancellationToken).ConfigureAwait(false);
+        ResolveBlockSignalControllers(trackStretches);
+
         if (isRestart)
         {
             var dispatchCalls = await _stateProvider.ReadDispatchCallsAsync(cancellationToken).ConfigureAwait(false);
@@ -44,10 +47,33 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
         }
         else
         {
-            var trackStretches = await _configuration.GetTrackStretchesAsync(cancellationToken).ConfigureAwait(false);
             var calls = await _configuration.GetTrainStationCallsAsync(cancellationToken).ConfigureAwait(false);
             _trainSections = calls.ToDispatchSections(trackStretches, TimeProvider, _logger).ToDictionary(c => c.Id);
             var result = await Persist();
+        }
+    }
+
+    /// <summary>
+    /// Resolves placeholder BlockSignal.ControlledBy references to actual StationDispatcher instances.
+    /// </summary>
+    private void ResolveBlockSignalControllers(IEnumerable<Layout.DispatchStretch> trackStretches)
+    {
+        var dispatchersByName = _dispatchers.Values.ToDictionary(d => d.Name);
+        foreach (var stretch in trackStretches)
+        {
+            ResolveBlockSignals(stretch.Forward.IntermediateBlockSignals, dispatchersByName);
+            ResolveBlockSignals(stretch.Reverse.IntermediateBlockSignals, dispatchersByName);
+        }
+    }
+
+    private static void ResolveBlockSignals(IList<Layout.BlockSignal> blockSignals, Dictionary<string, StationDispatcher> dispatchersByName)
+    {
+        foreach (var blockSignal in blockSignals)
+        {
+            if (dispatchersByName.TryGetValue(blockSignal.ControlledBy.Name, out var dispatcher))
+            {
+                blockSignal.ControlledBy = dispatcher;
+            }
         }
     }
 }

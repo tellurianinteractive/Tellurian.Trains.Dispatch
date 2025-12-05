@@ -19,6 +19,11 @@ namespace Tellurian.Trains.Dispatch.Layout;
 public record BlockSignal(string Name, IDispatcher ControlledBy, bool IsJunction = false)
 {
     public int Id { get; set { field = value.OrNextId; } }
+    /// <summary>
+    /// The dispatcher that controls this block signal.
+    /// Initially set to a placeholder during configuration, resolved to actual StationDispatcher during Broker initialization.
+    /// </summary>
+    public IDispatcher ControlledBy { get; set; } = ControlledBy;
     public override string ToString() =>
         IsJunction ? $"{Name}, junction controlled by {ControlledBy.Name}" : $"{Name} controlled by {ControlledBy.Name}";
 }

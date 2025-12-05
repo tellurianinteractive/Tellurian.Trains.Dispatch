@@ -15,6 +15,7 @@ public static class TrainStateExtensions
 {
     extension(TrainState state)
     {
+        internal bool IsIn(TrainState[] states) => states.Contains(state);
         public bool IsNot(TrainState[] otherStates) => !otherStates.Contains(state);
     }
 }

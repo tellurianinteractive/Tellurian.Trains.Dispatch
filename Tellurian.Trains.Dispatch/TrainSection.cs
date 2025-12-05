@@ -43,6 +43,14 @@ public class TrainSection
         .Select(k => (k.Key,k.Value));
 
     /// <summary>
+    /// Gets available train state actions based on current state.
+    /// Before Running: Cancel is available. When Running: only Abort is available.
+    /// </summary>
+    public IEnumerable<(TrainState State, Func<bool> Action)> AvailableTrainActions => TrainActions
+        .Where(k => k.Key.IsIn(this.NextTrainStates))
+        .Select(k => (k.Key, k.Value));
+
+    /// <summary>
     /// Gets block signal passage actions for the specified dispatcher.
     /// Only returns actions for block signals controlled by this dispatcher
     /// that are the next in sequence to be passed.
@@ -53,7 +61,7 @@ public class TrainSection
                 kvp.Key == this.CurrentBlockIndex &&
                 kvp.Key < BlockSignalPassages.Count &&
                 BlockSignalPassages[kvp.Key].IsExpected &&
-                BlockSignalPassages[kvp.Key].BlockSignal.ControlledBy.Name == dispatcher.Name)
+                BlockSignalPassages[kvp.Key].BlockSignal.ControlledBy.Id == dispatcher.Id)
             .Select(kvp => kvp.Value);
 
     /// <summary>
@@ -85,16 +93,28 @@ public class TrainSection
         if (dispatchStretch.Forward.CanHave(departure, arrival))
         {
             var trainSection = new TrainSection(dispatchStretch.Forward, departure, arrival, timeProvider);
+            trainSection.InitializeBlockSignalPassages();
             return Option<TrainSection>.Success(trainSection);
         }
         else if (dispatchStretch.Reverse.CanHave(departure, arrival))
         {
             var trainSection = new TrainSection(dispatchStretch.Reverse, departure, arrival, timeProvider);
+            trainSection.InitializeBlockSignalPassages();
             return Option<TrainSection>.Success(trainSection);
         }
         else
         {
             return Option<TrainSection>.Fail("Departure or arrival not on track stretch or they are not on the same train.");
+        }
+    }
+
+    private void InitializeBlockSignalPassages()
+    {
+        BlockSignalPassages = this.CreateBlockSignalPassages().ToList();
+        for (int i = 0; i < BlockSignalPassages.Count; i++)
+        {
+            var index = i; // capture for closure
+            BlockSignalPassageActions.Add(index, () => this.PassBlockSignal(index));
         }
     }
 
@@ -111,12 +131,5 @@ public class TrainSection
         DispatchActions.Add(DispatchState.Departed, this.Departed);
         DispatchActions.Add(DispatchState.Arrived, this.Arrived);
         DispatchActions.Add(DispatchState.Passed, this.PassNextBlockSignal);
-
-        // Add block signal passage actions
-        for (int i = 0; i < BlockSignalPassages.Count; i++)
-        {
-            var index = i; // capture for closure
-            BlockSignalPassageActions.Add(index, () => this.PassBlockSignal(index));
-        }
     }
 }

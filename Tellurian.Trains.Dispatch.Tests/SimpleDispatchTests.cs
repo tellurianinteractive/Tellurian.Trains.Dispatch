@@ -318,8 +318,9 @@ public class SimpleDispatchTests
     {
         GetDepartureAction(DispatchState.Requested)();
 
-        // Cancel the train
-        _trainSection.Departure.Train.State = TrainState.Canceled;
+        // Cancel the train (train is Manned, so Cancel is available)
+        var cancelAction = GetTrainAction(TrainState.Canceled);
+        Assert.IsTrue(cancelAction());
 
         // No dispatch actions available
         Assert.IsFalse(_trainSection.DepartureActions.Any());
@@ -333,8 +334,9 @@ public class SimpleDispatchTests
         GetArrivalAction(DispatchState.Accepted)();
         GetDepartureAction(DispatchState.Departed)();
 
-        // Abort the train
-        _trainSection.Departure.Train.State = TrainState.Aborted;
+        // Abort the train (train is Running, so only Abort is available)
+        var abortAction = GetTrainAction(TrainState.Aborted);
+        Assert.IsTrue(abortAction());
 
         // Clear action should be available
         var clearAction = _trainSection.ClearCanceledOrAbortedTrain;
@@ -342,7 +344,7 @@ public class SimpleDispatchTests
     }
 
     [TestMethod]
-    public void ClearCanceledTrain_RemovesFromActiveTrains()
+    public void ClearAbortedTrain_RemovesFromActiveTrains()
     {
         GetDepartureAction(DispatchState.Requested)();
         GetArrivalAction(DispatchState.Accepted)();
@@ -351,8 +353,9 @@ public class SimpleDispatchTests
         // Train should be on the stretch
         Assert.Contains(_trainSection, _trainSection.DispatchStretch.ActiveTrains);
 
-        // Cancel and clear
-        _trainSection.Departure.Train.State = TrainState.Canceled;
+        // Abort and clear (train is Running, so only Abort is available)
+        var abortAction = GetTrainAction(TrainState.Aborted);
+        Assert.IsTrue(abortAction());
         var clearAction = _trainSection.ClearCanceledOrAbortedTrain;
         Assert.IsNotNull(clearAction);
         Assert.IsTrue(clearAction());
@@ -368,8 +371,9 @@ public class SimpleDispatchTests
         GetDepartureAction(DispatchState.Requested)();
         GetArrivalAction(DispatchState.Accepted)();
 
-        // Cancel before departing
-        _trainSection.Departure.Train.State = TrainState.Canceled;
+        // Cancel before departing (train is Manned, so Cancel is available)
+        var cancelAction = GetTrainAction(TrainState.Canceled);
+        Assert.IsTrue(cancelAction());
 
         // No clear action (train is not on the stretch)
         Assert.IsNull(_trainSection.ClearCanceledOrAbortedTrain);
@@ -384,6 +388,9 @@ public class SimpleDispatchTests
 
     private Func<bool> GetArrivalAction(DispatchState state) =>
         _trainSection.ArrivalActions.Single(a => a.State == state).Action;
+
+    private Func<bool> GetTrainAction(TrainState state) =>
+        _trainSection.AvailableTrainActions.Single(a => a.State == state).Action;
 
     private bool HasDepartureAction(DispatchState state) =>
         _trainSection.DepartureActions.Any(a => a.State == state);
