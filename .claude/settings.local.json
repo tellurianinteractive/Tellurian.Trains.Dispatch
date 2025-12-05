@@ -6,7 +6,10 @@
       "Bash(dotnet build:*)",
       "Bash(dotnet test:*)",
       "mcp__microsoft-learn__microsoft_docs_search",
-      "mcp__microsoft-learn__microsoft_docs_fetch"
+      "mcp__microsoft-learn__microsoft_docs_fetch",
+      "WebFetch(domain:fremo-stw.sourceforge.net)",
+      "WebFetch(domain:www.bmertins.de)",
+      "WebFetch(domain:www.mw-modellbau.de)"
     ],
     "deny": [],
     "ask": []
