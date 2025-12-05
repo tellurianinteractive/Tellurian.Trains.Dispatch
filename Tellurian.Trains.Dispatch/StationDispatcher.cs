@@ -5,6 +5,7 @@ namespace Tellurian.Trains.Dispatch;
 
 public record StationDispatcher(Station Station, IBroker Broker) : IDispatcher
 {
+    public int Id => Station.Id;
     public string Name => Station.Name;
     public IEnumerable<TrainSection> Arrivals => Broker.GetArrivalsFor(Station, 10);
     public IEnumerable<TrainSection> Departures => Broker.GetDeparturesFor(Station, 10);

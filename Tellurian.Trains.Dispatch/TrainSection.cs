@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Tellurian.Trains.Dispatch;
 using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
@@ -73,17 +72,6 @@ public class TrainSection
         Arrival = arrival;
         TimeProvider = timeProvider;
     }
-    [Obsolete]
-    private TrainSection(DispatchStretch dispatchStretch, TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider)
-    {
-        TimeProvider = timeProvider;
-        StretchDirection=dispatchStretch.Forward;
-        Departure = departure;
-        Arrival = arrival;
-        State = DispatchState.None;
-        BlockSignalPassages = [.. this.CreateBlockSignalPassages()];
-        CreateActionDictionaries();
-    }
     /// <summary>
     /// Creates a <see cref="TrainSection"/>
     /// </summary>
@@ -121,6 +109,7 @@ public class TrainSection
         DispatchActions.Add(DispatchState.Revoked, this.Revoke);
         DispatchActions.Add(DispatchState.Departed, this.Departed);
         DispatchActions.Add(DispatchState.Arrived, this.Arrived);
+        DispatchActions.Add(DispatchState.Passed, this.PassNextBlockSignal);
 
         // Add block signal passage actions
         for (int i = 0; i < BlockSignalPassages.Count; i++)

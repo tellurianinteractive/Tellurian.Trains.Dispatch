@@ -11,6 +11,7 @@ namespace Tellurian.Trains.Dispatch
         Accepted,
         Revoked,
         Departed,
+        Passed,
         Arrived,
     }
 

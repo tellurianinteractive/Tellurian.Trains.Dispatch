@@ -12,7 +12,7 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
     private readonly ILogger<Broker> _logger = logger;
 
     private Dictionary<int, TrainSection> _trainSections = [];
-    private Dictionary<string, StationDispatcher> _dispatchers = [];
+    private Dictionary<int, StationDispatcher> _dispatchers = [];
     private Task<bool> Persist() => _stateProvider.SaveDispatchCallsAsync(_trainSections.Values);
 
     public ITimeProvider TimeProvider { get; } = timeProvider;
@@ -32,7 +32,11 @@ public class Broker(IBrokerConfiguration configuration, IBrokerStateProvider sta
     public async Task InitAsync(bool isRestart, CancellationToken cancellationToken = default)
     {
         var stations = await _configuration.GetStationsAsync(cancellationToken).ConfigureAwait(false);
-        _dispatchers = stations.Select(s => new StationDispatcher(s, this)).ToDictionary(d => d.Name);
+        _dispatchers = stations.Select(s => new StationDispatcher(s, this)).ToDictionary(d => d.Id);
+        foreach (var station in stations) { 
+            station.Dispatcher = _dispatchers[station.Id];
+        }
+        
         if (isRestart)
         {
             var dispatchCalls = await _stateProvider.ReadDispatchCallsAsync(cancellationToken).ConfigureAwait(false);

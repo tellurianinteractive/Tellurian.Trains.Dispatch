@@ -91,6 +91,16 @@ internal static class TrainSectionUpdateExtensions
         }
 
         /// <summary>
+        /// Marks the next block signal as passed.
+        /// Called via DispatchActions when dispatcher has DispatchState.Passed available.
+        /// </summary>
+        /// <returns>True if the passage was marked, false if not allowed.</returns>
+        internal bool PassNextBlockSignal()
+        {
+            return trainSection.PassBlockSignal(trainSection.CurrentBlockIndex);
+        }
+
+        /// <summary>
         /// Marks the block signal at the specified index as passed.
         /// Must be called in sequence - trains pass block signals in order.
         /// </summary>

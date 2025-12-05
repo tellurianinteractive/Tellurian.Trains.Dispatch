@@ -4,6 +4,7 @@
 /// </summary>
 public interface IDispatcher
 {
+    int Id { get; }
     string Name { get; }
     /// <summary>
     /// <see cref="TrainSection">Departing trains to dispatch.</see>
