@@ -17,6 +17,7 @@ public static class TrainSectionExtensions
         internal Train Train => trainSection.Departure.Train;
         public bool IsFirst => trainSection.Departure.SequenceNumner == 1;
         public bool IsLast => trainSection.Arrival.IsDeparture == false;
+        public bool IsUnmanned => trainSection.Train.State < TrainState.Manned;
 
         internal bool IsRunningForwardOn(DispatchStretch dispatchStretch) =>
              trainSection.Departure.At.Equals(dispatchStretch.Forward.From) && trainSection.Arrival.At.Equals(dispatchStretch.Forward.To);

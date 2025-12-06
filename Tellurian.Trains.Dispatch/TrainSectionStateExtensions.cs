@@ -63,6 +63,7 @@ internal static class TrainSectionStateExtensions
         public DispatchState[] NextDispatchStates => trainSection.State switch
         {
             _ when trainSection.Train.IsCanceledOrAborted => [],
+            DispatchState.None when trainSection.IsUnmanned => [],
             DispatchState.None or
             DispatchState.Rejected or
             DispatchState.Revoked => [DispatchState.Requested],
