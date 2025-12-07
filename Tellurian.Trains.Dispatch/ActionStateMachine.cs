@@ -68,7 +68,7 @@ internal class ActionStateMachine : IActionProvider
     /// </summary>
     private static IEnumerable<ActionContext> GetDepartureDispatcherActions(TrainSection section, IDispatcher dispatcher)
     {
-        if (section.Train.IsCanceledOrAborted) yield break;
+        if (!section.Train.IsDispatchable) yield break;
 
         switch (section.State)
         {
@@ -94,7 +94,7 @@ internal class ActionStateMachine : IActionProvider
     /// </summary>
     private static IEnumerable<ActionContext> GetArrivalDispatcherActions(TrainSection section, IDispatcher dispatcher)
     {
-        if (section.Train.IsCanceledOrAborted) yield break;
+        if (!section.Train.IsDispatchable) yield break;
 
         switch (section.State)
         {
@@ -120,7 +120,7 @@ internal class ActionStateMachine : IActionProvider
     /// </summary>
     private static IEnumerable<ActionContext> GetPassActions(TrainSection section, IDispatcher dispatcher)
     {
-        if (section.Train.IsCanceledOrAborted) yield break;
+        if (!section.Train.IsDispatchable) yield break;
         if (section.State != DispatchState.Departed) yield break;
         if (section.IsOnLastTrackStretch) yield break;
 

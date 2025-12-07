@@ -264,7 +264,7 @@ Returns dispatcher with arrivals and departures, each including:
     "id": 38,
     "state": "None",
     "actions": [{ "name": "request", "href": "..." }],
-    "trainActions": [{ "name": "manned", "href": "..." }]
+    "trainActions": [{ "name": "running", "href": "..." }]
   }]
 }
 ```

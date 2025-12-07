@@ -35,6 +35,7 @@ namespace Tellurian.Trains.Dispatch.Trains
             public bool IsAborted => train.State == TrainState.Aborted;
             public bool IsCanceledOrAborted => train.IsCanceled || train.IsAborted;
             public bool IsNotCancelledOrAborted => train.State.IsNot([TrainState.Canceled, TrainState.Aborted]);
+            public bool IsDispatchable => train.State.IsIn([TrainState.Manned, TrainState.Running]);
 
             public IList<TrainStationCall> Calls(IEnumerable<TrainStationCall> allCalls) =>
                 [.. allCalls
