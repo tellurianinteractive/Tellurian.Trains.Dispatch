@@ -3,6 +3,7 @@
     <File Path="CLAUDE.md" />
     <File Path="Directory.Build.props" />
     <File Path="README.md" />
+    <File Path="RgZm.md" />
     <File Path="SPECIFICATION.md" />
     <File Path="ZN800.md" />
   </Folder>
