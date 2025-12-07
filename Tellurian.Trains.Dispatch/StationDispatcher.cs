@@ -7,6 +7,10 @@ public record StationDispatcher(Station Station, IBroker Broker) : IDispatcher
 {
     public int Id => Station.Id;
     public string Name => Station.Name;
-    public IEnumerable<TrainSection> Arrivals => Broker.GetArrivalsFor(Station, 10);
-    public IEnumerable<TrainSection> Departures => Broker.GetDeparturesFor(Station, 10);
+    public string Signature => Station.Signature;
+    public IEnumerable<ActionContext> ArrivalActions => Broker.GetArrivalActionsFor(this, 10);
+    public IEnumerable<ActionContext> DepartureActions => Broker.GetDepartureActionsFor(this, 10);
+
+    public IEnumerable<TrainSection> GetArrivals(int maxItems = 10) => throw new NotImplementedException();
+    public IEnumerable<TrainSection> GetDepartures(int maxItems = 10) => throw new NotImplementedException();
 }

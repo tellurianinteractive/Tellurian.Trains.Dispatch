@@ -11,41 +11,28 @@ public static class DispatchStretchExtensions
             stretch.Forward.CanHave(departure, arrival) ||
             stretch.Reverse.CanHave(departure, arrival);
 
-        internal bool IsForward(DispatchStretchDirection direction) => direction.Equals(stretch.Forward); 
+        internal bool IsForward(DispatchStretchDirection direction) => direction.Equals(stretch.Forward);
         internal bool IsReverse(DispatchStretchDirection direction) => direction.Equals(stretch.Reverse);
 
         /// <summary>
-        /// Checks if a train can enter the stretch (depart into Block 0).
-        /// For single track: no opposite-direction trains allowed.
-        /// For all tracks: Block 0 must be free in the train's direction.
+        /// Total number of TrackStretches in this dispatch stretch.
+        /// </summary>
+        internal int NumberOfTrackStretches => stretch.TrackStretches.Count;
+
+        /// <summary>
+        /// Checks if a train can enter the stretch (depart into first TrackStretch).
+        /// Capacity checking is done per TrackStretch in the new model.
         /// </summary>
         internal bool HasFreeTrackFor(TrainSection trainSection)
         {
             var direction = trainSection.TrainDirection;
-            var trainsInSameDirection = direction.IsForward ? stretch.TrainsInForwardDirection : stretch.TrainsInReverseDirection;
-            var trainsInOppositeDirection = direction.IsReverse ? stretch.TrainsInForwardDirection : stretch.TrainsInReverseDirection;
+            var firstTrackStretch = direction.IsForward
+                ? stretch.TrackStretches.First()
+                : stretch.TrackStretches.Last();
 
-            // Single track: no opposite-direction trains allowed (collision risk)
-            if (stretch.NumberOfTracks == 1 && trainsInOppositeDirection.Length > 0)
-                return false;
-
-            // Block 0 must be free (no train currently in first segment)
-            return !trainsInSameDirection.Any(t => t.CurrentBlockIndex == 0);
+            // Check if the first TrackStretch has available capacity
+            return firstTrackStretch.HasAvailableTrack(direction);
         }
-
-        /// <summary>
-        /// Checks if a specific block is free for trains in a given direction.
-        /// </summary>
-        internal bool IsBlockFree(int blockIndex, int direction)
-        {
-            var trainsInDirection = direction == 1 ? stretch.TrainsInForwardDirection : stretch.TrainsInReverseDirection;
-            return !trainsInDirection.Any(t => t.CurrentBlockIndex == blockIndex);
-        }
-
-        internal TrainSection[] TrainsInForwardDirection =>
-            [.. stretch.ActiveTrains.Where(t => t.IsRunningForwardOn(stretch))];
-        internal TrainSection[] TrainsInReverseDirection =>
-            [.. stretch.ActiveTrains.Where(t => t.IsRunningReverseOn(stretch))];
     }
 
     extension(IEnumerable<DispatchStretch> stretches)
@@ -60,4 +47,18 @@ public static class DispatchStretchExtensions
             trainSection.Departure.At.Equals(dispatchStretch.Forward.From) && trainSection.Arrival.At.Equals(dispatchStretch.Forward.To) ||
             trainSection.Departure.At.Equals(dispatchStretch.Reverse.From) && trainSection.Arrival.At.Equals(dispatchStretch.Reverse.To);
     }
+
+    extension(IEnumerable<TrackStretch> trackStretches)
+    {
+
+        public List<TrackStretch> FindPathBetween(Station From, Station To)
+        {
+            // Simple case
+            var result = (trackStretches.SingleOrDefault(ts => ts.Start.Equals(From) && ts.End.Equals(To)));
+            if (result is not null) return [result];
+            // TODO: Otherwise implement shortest path algoritm. The trackStretches dictionary has Start station Id as key.
+            return [.. trackStretches]; //TODO: Temporary return to avoid compilation error, replace with actual result.
+        }
+    }
+
 }

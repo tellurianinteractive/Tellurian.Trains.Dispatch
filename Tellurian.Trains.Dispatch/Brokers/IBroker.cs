@@ -1,14 +1,13 @@
-﻿using Tellurian.Trains.Dispatch.Trains;
+﻿namespace Tellurian.Trains.Dispatch.Brokers;
 
-namespace Tellurian.Trains.Dispatch.Brokers;
 /// <summary>
-/// 
+/// Central coordinator for train dispatch operations.
 /// </summary>
 public interface IBroker
 {
     ITimeProvider TimeProvider { get; }
-    IEnumerable<TrainSection> GetArrivalsFor(Station? station, int maxItems);
-    IEnumerable<TrainSection> GetDeparturesFor(Station? station, int maxItems);
+    IEnumerable<ActionContext> GetArrivalActionsFor(IDispatcher dispatcher, int maxItems);
+    IEnumerable<ActionContext> GetDepartureActionsFor(IDispatcher dispatcher, int maxItems);
     IEnumerable<IDispatcher> GetDispatchers();
     Task InitAsync(bool isRestart, CancellationToken cancellationToken = default);
 }

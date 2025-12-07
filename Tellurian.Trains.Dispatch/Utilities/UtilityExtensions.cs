@@ -7,12 +7,12 @@
 
         extension(int id)
         {
-            internal int OrNextId => id <=0 ? Interlocked.Increment(ref _nextId) : id;
+            internal int OrNextId => id <= 0 ? Interlocked.Increment(ref _nextId) : id;
         }
 
         extension<T>(IList<T>? list)
         {
-            public IList<T>? Reversed => list is null? null: [.. list.Reverse()];
+            public IList<T>? Reversed => list is null ? null : [.. list.Reverse()];
         }
     }
 }

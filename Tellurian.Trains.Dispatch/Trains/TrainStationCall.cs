@@ -1,14 +1,18 @@
-﻿using Tellurian.Trains.Dispatch.Utilities;
+﻿using Tellurian.Trains.Dispatch.Layout;
+using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch.Trains;
 
-public record TrainStationCall(Train Train, Station At, CallTime Scheduled)
+public record TrainStationCall(Train Train, OperationPlace At, CallTime Scheduled)
 {
     public int Id { get; set { field = value.OrNextId; } }
-    public StationTrack? Track { get; set; }
+    public StationTrack Track => NewTrack is not null ? NewTrack : PlannedTrack;
+    public StationTrack PlannedTrack { get; init; } = default!;
+    public StationTrack? NewTrack { get; internal set; }
     public CallTime Observed { get; internal set; }
-    public bool IsArrival { get; set; } = true;
-    public bool IsDeparture { get; set; } = true;
-    internal int SequenceNumner { get; set; }
-    public override string ToString() => $"{At.Signature} track {Track} arr {Scheduled.ArrivalTime:t} dep {Scheduled.DepartureTime:t}";
+    public bool IsArrival { get; init; } = true;
+    public bool IsDeparture { get; init; } = true;
+    public int SequenceNumber { get; init; }
+    public override string ToString() =>
+        $"{At.Signature} track {PlannedTrack} arr {Scheduled.ArrivalTime:t} dep {Scheduled.DepartureTime:t}";
 }

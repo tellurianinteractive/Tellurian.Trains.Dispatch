@@ -28,7 +28,7 @@ public class SimpleDispatchTests
 
         var dispatchers = _broker.GetDispatchers().Cast<StationDispatcher>().ToList();
         _departureDispatcher = dispatchers.Single(d => d.Name == "Alpha");
-        _trainSection = _departureDispatcher.Departures.Single();
+        _trainSection = _departureDispatcher.GetDepartures(1).Single();
     }
 
     #region 1. Happy Path: Complete Dispatch Workflow
@@ -123,7 +123,7 @@ public class SimpleDispatchTests
         Assert.IsTrue(HasDepartureAction(DispatchState.Requested));
 
         // Arrival has no actions
-        Assert.IsFalse(_trainSection.ArrivalActions.Any());
+        Assert.IsFalse(_trainSection.GetArrivalActions().Any());
     }
 
     #endregion
@@ -139,7 +139,7 @@ public class SimpleDispatchTests
         Assert.IsTrue(HasDepartureAction(DispatchState.Requested));
 
         // Arrival has no actions
-        Assert.IsFalse(_trainSection.ArrivalActions.Any());
+        Assert.IsFalse(HasArrivalAction());
     }
 
     [TestMethod]

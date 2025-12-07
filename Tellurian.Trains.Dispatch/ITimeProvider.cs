@@ -5,7 +5,7 @@
 /// </summary>
 public interface ITimeProvider
 {
-    TimeSpan Time( TimeSpan? sheduledTime = null);
+    TimeSpan Time(TimeSpan? sheduledTime = null);
 }
 
 internal class DefaultTimeProvider : ITimeProvider

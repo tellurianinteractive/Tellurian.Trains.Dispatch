@@ -1,59 +1,81 @@
 ﻿using Tellurian.Trains.Dispatch;
-using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch.Layout;
+
 /// <summary>
-/// A <see cref="=DispatchStretch"/> defines the track properties between two adjacent <see cref="Station">stations</see> 
-/// that have a <see cref="IDispatcher"/> role. 
-/// There can be immediate 
+/// A <see cref="DispatchStretch"/> defines a logical route between two <see cref="Station">stations</see>,
+/// composed of one or more <see cref="TrackStretch">track stretches</see>.
+/// Capacity is managed at the TrackStretch level, allowing shared infrastructure
+/// between multiple DispatchStretches.
 /// </summary>
+/// <param name="from">The <see cref="Station"/> that is one end</param>
+/// <param name="to">The <see cref="Station"/> that is the other end.</param>
+/// <param name="allTrackStretches">
+/// contains all track stretches in the layout, and they should be defines in
+/// one primary direction so that it is possible to find the shortest path between stations.
+/// </param>
 /// <remarks>
-/// The capacity of the track stretchs is defined of <see cref="numberOfTracks"/> and <see cref="numberOfBlocks"/>.
-/// The <see cref="numberOfTracks"/>defines how many trains that concurrenlly can be sent in any direction.
-/// The <see cref="intermediateBlockSignals"/>defines how many trains that concurrently can be sent on one track in the same direction.
-/// Example: 
-/// A track strectch has two <see cref="numberOfTracks"/> and two <see cref="BlockSignal"/>, i.e. one intermediate block signal.
-/// Then on each track there can be two trains on its way in the same direction, totally four trains. 
-/// On a double track this often means that there can be two trains on is way in each direction.
-/// /// </remarks>
+/// The <see cref="TrackStretches"/> are created using a shortest path algorithm.
+/// that finds the sequence of track stretches between from and to stations.
+/// </remarks>
 public class DispatchStretch
 {
-    public int NumberOfTracks { get; }
+    public DispatchStretch(Station from, Station to, IEnumerable<TrackStretch> allTrackStretces)
+    {
+        From = from;
+        To = to;
+        TrackStretches = allTrackStretces.FindPathBetween(from, to);
+        Forward = new(this, StretchDirection.Forward);
+        Reverse = new(this, StretchDirection.Reverse);
+    }
+    public int Id { get; set { field = value.OrNextId; } }
+
+    /// <summary>
+    /// Ordered sequence of TrackStretches that make up this DispatchStretch.
+    /// Found using shortest path algorithm between origin and destination.
+    /// </summary>
+    public IList<TrackStretch> TrackStretches { get; }
+
+    /// <summary>
+    /// Forward direction descriptor (Origin → Destination).
+    /// </summary>
     public DispatchStretchDirection Forward { get; }
+
+    /// <summary>
+    /// Reverse direction descriptor (Destination → Origin).
+    /// </summary>
     public DispatchStretchDirection Reverse { get; }
 
-    /// <param name="from">One end of the track stretch.</param>
-    /// <param name="to">The other end of the track stretch.</param>
-    /// <param name="numberOfTracks">The number of parallel tracks between the stations.</param>
-    /// <param name="intermediateBlockSignals">The immediate <see cref="BlockSignal">signals</see> on the <see cref="DispatchStretch"/>.</param>
-      public DispatchStretch(Station from, Station to, int numberOfTracks = 1, IList<BlockSignal>? intermediateBlockSignals = null)
-    {
-        NumberOfTracks = numberOfTracks;
-        Forward = new(this, from, to, StretchDirection.Forward, intermediateBlockSignals);
-        Reverse = new(this, to, from, StretchDirection.Reverse, intermediateBlockSignals?.Reversed);
-    }
 
+    /// <summary>
+    /// Creates a DispatchStretch from a sequence of TrackStretches.
+    /// </summary>
+    /// <param name="trackStretches">Ordered sequence of TrackStretches from origin to destination.</param>
+
+    /// <summary>
+    /// Origin station of this dispatch stretch.
+    /// </summary>
+    public Station From { get; }
+
+    /// <summary>
+    /// Destination station of this dispatch stretch.
+    /// </summary>
+    public Station To { get; }
+
+    /// <summary>
+    /// Signal-controlled places along the route (intermediate points between TrackStretches).
+    /// </summary>
+    public IEnumerable<SignalControlledPlace> IntermediateControlPoints =>
+        TrackStretches.Skip(1).Select(s => s.Start).OfType<SignalControlledPlace>();
+
+    /// <summary>
+    /// Active train sections currently using this dispatch stretch.
+    /// </summary>
     public IList<TrainSection> ActiveTrains { get; } = [];
-    public override string ToString() => $"{Forward}, {Tracks}";
-    public override int GetHashCode() => HashCode.Combine(Forward, Reverse);
-    public override bool Equals(object? obj) => obj is DispatchStretch stretch && stretch.Forward.Equals(Forward) && stretch.Reverse.Equals(Reverse);
 
-    public bool TryAddActiveDispatchTrain(TrainSection trainSection)
-    {
-        if (this.HasFreeTrackFor(trainSection))
-        {
-            ActiveTrains.Add(trainSection);
-            return true;
-        }
-        return false;
-    }
-
-    private string Tracks => NumberOfTracks switch
-    {
-        1 => "Single track",
-        2 => "Double track",
-        _ => $"{NumberOfTracks} parallel tracks"
-    };
+    public override string ToString() => $"{From.Signature} → {To.Signature}";
+    public override int GetHashCode() => Id.GetHashCode();
+    public override bool Equals(object? obj) => obj is DispatchStretch stretch && stretch.Id == Id;
 }

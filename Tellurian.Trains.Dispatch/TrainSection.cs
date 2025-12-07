@@ -7,8 +7,8 @@ using Tellurian.Trains.Dispatch.Utilities;
 namespace Tellurian.Trains.Dispatch;
 
 /// <summary>
-/// Represents a <see cref="Train">train's</see> movement between adjacents <see cref="Station">stations</see> that
-/// is controlled by two  <see cref="IDispatcher"/>dispatchers.</see>
+/// Represents a <see cref="Train">train's</see> movement between adjacent <see cref="Station">stations</see> that
+/// is controlled by two <see cref="IDispatcher">dispatchers</see>.
 /// </summary>
 public class TrainSection
 {
@@ -18,60 +18,45 @@ public class TrainSection
     public TrainStationCall Departure { get; }
     public TrainStationCall Arrival { get; }
     public DispatchState State { get; internal set; }
-    public IList<BlockSignalPassage> BlockSignalPassages { get; internal set; } = [];
+
+    /// <summary>
+    /// Index of the current TrackStretch the train is on.
+    /// Starts at 0 when departed, increments as train passes each control point.
+    /// </summary>
+    public int CurrentTrackStretchIndex { get; internal set; }
+
+    /// <summary>
+    /// The current TrackStretch the train is on, or null if not yet departed.
+    /// </summary>
+    public TrackStretch? CurrentTrackStretch =>
+        State == DispatchState.Departed && CurrentTrackStretchIndex < DispatchStretch.TrackStretches.Count
+            ? StretchDirection.TrackStretchesInOrder.ElementAt(CurrentTrackStretchIndex)
+            : null;
+
+    /// <summary>
+    /// The next control point the train will reach, or null if approaching destination.
+    /// </summary>
+    public OperationPlace? NextControlPoint =>
+        CurrentTrackStretchIndex < DispatchStretch.TrackStretches.Count - 1
+            ? CurrentTrackStretch?.End
+            : null;
+
+    /// <summary>
+    /// Total number of TrackStretches to traverse.
+    /// </summary>
+    public int TotalTrackStretches => DispatchStretch.TrackStretches.Count;
+
+    /// <summary>
+    /// True when train has passed all intermediate control points and is on the last TrackStretch.
+    /// </summary>
+    public bool IsOnLastTrackStretch => CurrentTrackStretchIndex >= TotalTrackStretches - 1;
 
     public override int GetHashCode() => Id.GetHashCode();
     public override bool Equals(object? obj) => obj is TrainSection section && section.Id == Id;
-    public override string ToString() => $"";
+    public override string ToString() => $"{this.Train.Identity} {this.From.Signature}→{this.To.Signature}";
 
     [JsonIgnore]
     public ITimeProvider TimeProvider { get; }
-
-    [JsonIgnore]
-    private readonly Dictionary<TrainState, Func<bool>> TrainActions = [];
-    [JsonIgnore]
-    private readonly Dictionary<DispatchState, Func<bool>> DispatchActions = [];
-    [JsonIgnore]
-    private readonly Dictionary<int, Func<bool>> BlockSignalPassageActions = [];
-
-    public IEnumerable<(DispatchState State,Func<bool> Action)> ArrivalActions => DispatchActions
-        .Where(k => k.Key.IsIn(this.ArrivalStates))
-        .Select(k => (k.Key, k.Value));
-
-    public IEnumerable<(DispatchState State, Func<bool> Action)> DepartureActions => DispatchActions
-        .Where(k => k.Key.IsIn(this.DepartureStates))
-        .Select(k => (k.Key,k.Value));
-
-    /// <summary>
-    /// Gets available train state actions based on current state.
-    /// Before Running: Cancel is available. When Running: only Abort is available.
-    /// </summary>
-    public IEnumerable<(TrainState State, Func<bool> Action)> AvailableTrainActions => TrainActions
-        .Where(k => k.Key.IsIn(this.NextTrainStates))
-        .Select(k => (k.Key, k.Value));
-
-    /// <summary>
-    /// Gets block signal passage actions for the specified dispatcher.
-    /// Only returns actions for block signals controlled by this dispatcher
-    /// that are the next in sequence to be passed.
-    /// </summary>
-    public IEnumerable<Func<bool>> GetBlockSignalActionsFor(IDispatcher dispatcher) =>
-        BlockSignalPassageActions
-            .Where(kvp =>
-                kvp.Key == this.CurrentBlockIndex &&
-                kvp.Key < BlockSignalPassages.Count &&
-                BlockSignalPassages[kvp.Key].IsExpected &&
-                BlockSignalPassages[kvp.Key].BlockSignal.ControlledBy.Id == dispatcher.Id)
-            .Select(kvp => kvp.Value);
-
-    /// <summary>
-    /// Gets the clear action if available.
-    /// Only available when the train is canceled/aborted and on the stretch (Departed state).
-    /// </summary>
-    public Func<bool>? ClearCanceledOrAbortedTrain =>
-        this.Train.IsCanceledOrAborted && State == DispatchState.Departed
-            ? this.ClearFromStretch
-            : null;
 
     private TrainSection(DispatchStretchDirection direction, TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider)
     {
@@ -79,27 +64,21 @@ public class TrainSection
         Departure = departure;
         Arrival = arrival;
         TimeProvider = timeProvider;
-        CreateActionDictionaries();
     }
+
     /// <summary>
-    /// Creates a <see cref="TrainSection"/>
+    /// Creates a <see cref="TrainSection"/>.
     /// </summary>
-    /// <param name="dispatchStretch">The tracksection </param>
-    /// <param name="departure"></param>
-    /// <param name="arrival"></param>
-    /// <returns></returns>
     public static Option<TrainSection> Create(DispatchStretch dispatchStretch, TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider)
     {
         if (dispatchStretch.Forward.CanHave(departure, arrival))
         {
             var trainSection = new TrainSection(dispatchStretch.Forward, departure, arrival, timeProvider);
-            trainSection.InitializeBlockSignalPassages();
             return Option<TrainSection>.Success(trainSection);
         }
         else if (dispatchStretch.Reverse.CanHave(departure, arrival))
         {
             var trainSection = new TrainSection(dispatchStretch.Reverse, departure, arrival, timeProvider);
-            trainSection.InitializeBlockSignalPassages();
             return Option<TrainSection>.Success(trainSection);
         }
         else
@@ -108,28 +87,15 @@ public class TrainSection
         }
     }
 
-    private void InitializeBlockSignalPassages()
+    /// <summary>
+    /// Advances the train to the next TrackStretch after passing a control point.
+    /// </summary>
+    internal bool AdvanceToNextTrackStretch()
     {
-        BlockSignalPassages = this.CreateBlockSignalPassages().ToList();
-        for (int i = 0; i < BlockSignalPassages.Count; i++)
-        {
-            var index = i; // capture for closure
-            BlockSignalPassageActions.Add(index, () => this.PassBlockSignal(index));
-        }
-    }
+        if (State != DispatchState.Departed) return false;
+        if (IsOnLastTrackStretch) return false;
 
-
-    private void CreateActionDictionaries()
-    {
-        TrainActions.Add(TrainState.Canceled, this.SetCanceled);
-        TrainActions.Add(TrainState.Aborted, this.SetAborted);
-
-        DispatchActions.Add(DispatchState.Requested, this.Request);
-        DispatchActions.Add(DispatchState.Accepted, this.Accept);
-        DispatchActions.Add(DispatchState.Rejected, this.Reject);
-        DispatchActions.Add(DispatchState.Revoked, this.Revoke);
-        DispatchActions.Add(DispatchState.Departed, this.Departed);
-        DispatchActions.Add(DispatchState.Arrived, this.Arrived);
-        DispatchActions.Add(DispatchState.Passed, this.PassNextBlockSignal);
+        CurrentTrackStretchIndex++;
+        return true;
     }
 }

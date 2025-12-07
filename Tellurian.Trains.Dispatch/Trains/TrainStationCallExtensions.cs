@@ -11,7 +11,7 @@ public static class TrainStationCallExtensions
     {
         public void ChangeTrack(StationTrack other)
         {
-            call.Track = other;
+            call.NewTrack = other;
         }
 
         public void SetDepartureTime(TimeSpan departureTime) =>
@@ -25,23 +25,14 @@ public static class TrainStationCallExtensions
     extension(IEnumerable<TrainStationCall> calls)
     {
 
-        internal IEnumerable<TrainSection> ToDispatchSections(IEnumerable<DispatchStretch> dispatchStretches, ITimeProvider timeProvider, ILogger logger)
+        internal IEnumerable<TrainSection> ToTrainSections(IEnumerable<DispatchStretch> dispatchStretches, ITimeProvider timeProvider, ILogger logger)
         {
             var trains = calls.GroupBy(x => x.Train.Id);
             foreach (var train in trains)
             {
-                var trainCalls = train.OrderBy(c => c.Scheduled.DepartureTime).ToArray();
+                var trainCalls = train.OrderBy(c => c.Train.Id).ThenBy(c => c.SequenceNumber).ToArray();
                 for (int i = 0; i < trainCalls.Length; i++)
                 {
-                    trainCalls[i].SequenceNumner = i + 1;
-                    if (i == 0)
-                    {
-                        trainCalls[i].IsArrival = false;
-                    }
-                    else if (i == trainCalls.Length - 1)
-                    {
-                        trainCalls[i].IsDeparture = false;
-                    }
                     if (i < trainCalls.Length - 1)
                     {
                         var dispatchStretch = dispatchStretches.FindFor(trainCalls[i], trainCalls[i + 1]);
@@ -51,7 +42,6 @@ public static class TrainStationCallExtensions
                             if (section.HasValue) yield return section.Value!;
                             if (logger.IsEnabled(LogLevel.Warning))
                                 logger.LogWarning("Failed to create {ObjectName} with {E 0rrors}", nameof(TrainSection), section.Error);
-
                         }
                     }
                 }

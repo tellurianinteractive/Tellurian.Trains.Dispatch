@@ -10,7 +10,7 @@ public static class StretchDirectionExtensions
 {
     extension(StretchDirection direction)
     {
-        public bool IsForward => direction == StretchDirection.Forward; 
+        public bool IsForward => direction == StretchDirection.Forward;
         public bool IsReverse => direction == StretchDirection.Reverse;
     }
 }

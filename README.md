@@ -1,123 +1,126 @@
 # Tellurian.Trains.Dispatch
 
-A .NET library for dispatching trains between stations on a model railway.
+A modern .NET library for dispatching trains between stations on a model railway.
 
-## Overview
+## Why This Library?
 
-This library provides the core domain model and business logic for managing train dispatching operations. It tracks trains as they move between stations, manages dispatch requests and approvals, and handles capacity constraints on track sections.
+Running a realistic train operations session on a model railway requires coordination between multiple dispatchers. This library provides:
 
-The library is designed to be integrated into larger applications that provide the user interface, persistence, and time management.
+- **Realistic dispatch workflow** modeled after prototype railway operations
+- **Capacity management** for single and double track sections
+- **Intermediate control points** for block signals, passing loops, and junctions
+- **State machine-driven actions** ensuring only valid operations are available
+- **Flexible integration** with your choice of UI, persistence, and time management
 
-## Core Concepts
+The library handles the complex logic of train dispatching, letting you focus on the user experience.
 
-### Broker
-The central singleton component that maintains the state of all trains and their station calls. It manages track sections (DispatchStretch) and station dispatchers, providing a unified view of the railway network.
+## Core Architecture
 
-### Station and StationDispatcher
-A Station represents a named location on the railway with one or more tracks. Each station has an associated StationDispatcher that presents arrivals and departures for that station.
+### Physical Infrastructure
 
-### Train
-A train is identified by its operating company and identity (train number). Each train has a sequence of TrainSection sections representing its journey across the network.
+**OperationPlace** is the base for all locations where trains operate:
+- **Station** – Manned locations where trains stop for passengers or freight
+- **SignalControlledPlace** – Block signals, passing loops, or junctions controlled by a dispatcher
+- **OtherPlace** – Simple halts or unsignalled junctions
 
-### DispatchStretch
-The track section between two adjacent stations. A DispatchStretch has:
-- Capacity defined by number of tracks (single, double, etc.)
-- Optional intermediate block signals for finer capacity control
-- Support for bidirectional operation
+**TrackStretch** represents the physical track between two adjacent places, with one or more tracks (single-track, double-track, etc.).
 
-### TrainSection
-Represents a train's scheduled movement over a DispatchStretch, connecting a departure call at one station to an arrival call at the next. This is the primary unit for dispatch operations.
+### Logical Dispatch Routes
 
-### Block Signals
-Intermediate signal points on a DispatchStretch that divide the stretch into blocks (segments). When present, they allow multiple trains to occupy the same stretch simultaneously, but only one train per block:
-- N block signals create N+1 blocks (e.g., 2 signals = 3 blocks)
-- A train occupies one block at a time, tracked by its current block index
-- When a train passes a block signal, it moves to the next block, freeing the previous one
-- Each block signal is controlled by a dispatcher who confirms when a train passes
-- Block signals can be located at junctions where tracks diverge
+**DispatchStretch** defines the logical route between two stations. It may span multiple TrackStretches and include intermediate SignalControlledPlaces. Each DispatchStretch supports bidirectional operation through **DispatchStretchDirection**.
 
-### Block Occupancy
-The library tracks which block each train currently occupies:
-- **Block 0**: From the departure station to the first block signal
-- **Block 1...N-1**: Between consecutive block signals
-- **Block N**: From the last block signal to the arrival station
+### Trains and Calls
 
-A train's current block index is derived from the count of passed block signal passages. This enables:
-- Capacity enforcement: only one train per block in the same direction
-- Progress tracking: dispatchers see which block each train occupies
-- Safe following: the next train can only enter a block after the previous train clears it
+- **Train** – Identified by operating company and train number (e.g., "SJ IC 123")
+- **TrainStationCall** – A scheduled arrival or departure at a specific location and track
+- **TrainSection** – A train's movement across a DispatchStretch, from departure call to arrival call
 
-## Train Lifecycle
+## State Machines
 
-A train progresses through these states:
+### Train States
+```
+Planned → Manned → Running → Completed
+            ↓         ↓
+        Canceled   Aborted
+```
 
-1. **Planned** - Initial state when the train is scheduled
-2. **Manned** - Crew has been assigned and train is ready
-3. **Running** - Train is actively operating
-4. **Completed** - Train has finished its journey
+A train progresses from scheduled (Planned) through crew assignment (Manned) to active operation (Running), then either completes normally or is canceled/aborted.
 
-Alternative endings: **Canceled** (before running) or **Aborted** (during operation)
+### Dispatch States
+```
+None → Requested → Accepted → Departed → Arrived
+                        ↓
+                   Rejected/Revoked
+```
 
-## Dispatch Workflow
+Each TrainSection tracks its dispatch progress independently, from initial request through departure and arrival.
 
-Each TrainSection follows this dispatch workflow:
+## Action-Based Dispatch
 
-1. **Requested** - Departure dispatcher requests permission to dispatch
-2. **Accepted** or **Rejected** - Arrival dispatcher responds based on capacity and conditions
-3. **Departed** - Train has left the departure station (occupies Block 0)
-4. **Block Signal Passages** - If block signals exist, the controlling dispatcher marks each passage in sequence
-5. **Arrived** - Train has arrived at the destination station (only available after all block signals passed)
+Dispatchers interact through explicit actions. The **ActionStateMachine** determines which actions are valid based on current state and the dispatcher's role:
 
-An accepted request can be **Revoked** before departure if circumstances change.
+| Action | Performed By | Description |
+|--------|--------------|-------------|
+| Request | Departure dispatcher | Request permission to dispatch |
+| Accept/Reject | Arrival dispatcher | Respond to dispatch request |
+| Revoke | Departure dispatcher | Cancel an accepted request |
+| Depart | Departure dispatcher | Train leaves the station |
+| Pass | Control point dispatcher | Confirm train passed a signal |
+| Arrive | Arrival dispatcher | Train reached destination |
 
-### Dispatcher Actions
+Each dispatcher sees only the actions they are authorized to perform.
 
-The library uses a state machine pattern where each dispatcher is presented only the actions valid for the current state:
+## Capacity Management
 
-**Departure Dispatcher**:
-- Request dispatch when state is None, Rejected, or Revoked
-- Mark as Departed when Accepted
-- Revoke a request when Requested or Accepted
+The library enforces capacity constraints at the TrackStretch level:
 
-**Arrival Dispatcher**:
-- Accept or Reject when Requested
-- Mark as Arrived when Departed and all block signals passed
+- **Track availability** – Each physical track can be occupied by only one train at a time
+- **Direction conflicts** – On single track, opposing movements are blocked
+- **Block sections** – SignalControlledPlaces divide stretches into blocks, allowing multiple trains with safe spacing
 
-**Block Signal Dispatcher** (for signals they control):
-- Mark passage when train is in the block before this signal (current block index matches signal index)
+When a train departs, it occupies the first track section. As it passes each control point, it advances to the next section, freeing the previous one for following trains.
 
-### Capacity Rules
+## Integration
 
-Before accepting a dispatch request, the system checks capacity:
-- **Single track**: No trains in the opposite direction allowed
-- **All tracks**: Block 0 must be free (no train in the first segment moving in the same direction)
+Implement these interfaces to integrate the library:
 
-### Handling Canceled/Aborted Trains
-
-If a train is canceled or aborted while on the stretch (state is Departed):
-- The train must be manually cleared using the ClearFromStretch action
-- Clearing removes the train from active trains and frees the block it occupies
-- All expected block signal passages are marked as Canceled
-
-## Integration Interfaces
-
-To integrate this library, implement these interfaces:
-
-### IBrokerConfiguration
-Provides initial data loading:
-- Station definitions
-- Track stretch definitions
-- Block signal definitions
-- Scheduled train station calls
+### IBrokerDataProvider
+Supplies initial data in a specific order:
+1. OperationPlaces (stations, signals, halts)
+2. TrackStretches (physical infrastructure)
+3. DispatchStretches (logical routes)
+4. Trains
+5. TrainStationCalls (the timetable)
 
 ### IBrokerStateProvider
-Handles persistence:
-- Save current dispatch state
-- Restore state on restart
+Handles persistence of dispatch state for save/restore functionality.
 
 ### ITimeProvider
-Supplies the current time (typically from a fast clock for model railway operation).
+Supplies current time, typically from a fast clock for accelerated operation.
+
+## Getting Started
+
+```csharp
+// Create the broker with your implementations
+var broker = new Broker(dataProvider, stateProvider, timeProvider);
+await broker.InitAsync();
+
+// Get a station dispatcher
+var dispatcher = broker.GetDispatchers()
+    .First(d => d.Station.Name == "Stockholm");
+
+// Query available actions
+var departureActions = dispatcher.DepartureActions;
+var arrivalActions = dispatcher.ArrivalActions;
+```
+
+The Broker is the central coordinator. Each StationDispatcher presents the arrivals and departures relevant to that station, with actions filtered to what the dispatcher can perform.
+
+## Requirements
+
+- .NET 10.0 or later
+- Microsoft.Extensions.DependencyInjection (optional, for DI integration)
 
 ## License
 
-This library is licensed under GPL-3.0.
+GPL-3.0

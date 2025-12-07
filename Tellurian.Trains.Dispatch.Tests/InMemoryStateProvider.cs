@@ -16,7 +16,7 @@ internal class InMemoryStateProvider : IBrokerStateProvider
     private readonly List<TrainSection> _savedStretches = [];
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public async Task<IEnumerable<TrainSection>> ReadDispatchCallsAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<TrainSection>> ReadTrainSections(CancellationToken cancellationToken = default)
     {
         await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
