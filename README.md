@@ -40,8 +40,8 @@ The library handles the complex logic of train dispatching, letting you focus on
 ### Train States
 ```
 Planned → Manned → Running → Completed
-            ↓         ↓
-        Canceled   Aborted
+    ↓        ↓         ↓
+Canceled  Canceled  Aborted
 ```
 
 A train progresses from scheduled (Planned) through crew assignment (Manned) to active operation (Running), then either completes normally or is canceled/aborted.
