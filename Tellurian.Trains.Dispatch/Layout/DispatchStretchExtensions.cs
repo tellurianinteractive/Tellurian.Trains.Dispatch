@@ -51,13 +51,57 @@ public static class DispatchStretchExtensions
     extension(IEnumerable<TrackStretch> trackStretches)
     {
 
-        public List<TrackStretch> FindPathBetween(Station From, Station To)
+        public List<TrackStretch> FindPathBetween(Station from, Station to)
         {
-            // Simple case
-            var result = (trackStretches.SingleOrDefault(ts => ts.Start.Equals(From) && ts.End.Equals(To)));
-            if (result is not null) return [result];
-            // TODO: Otherwise implement shortest path algoritm. The trackStretches dictionary has Start station Id as key.
-            return [.. trackStretches]; //TODO: Temporary return to avoid compilation error, replace with actual result.
+            if (from.Equals(to)) return [];
+
+            // Build adjacency: only follow TrackStretch in its defined direction (Start → End)
+            // This ensures trains move consistently in same dirction over track streches and validates import data correctness
+            var adjacency = new Dictionary<OperationPlace, List<(TrackStretch Stretch, OperationPlace Next)>>();
+            foreach (var ts in trackStretches)
+            {
+                if (!adjacency.ContainsKey(ts.Start)) adjacency[ts.Start] = [];
+                adjacency[ts.Start].Add((ts, ts.End));
+            }
+
+            if (!adjacency.ContainsKey(from)) return [];
+
+            // BFS: track how we reached each place
+            var visited = new HashSet<OperationPlace> { from };
+            var queue = new Queue<OperationPlace>();
+            queue.Enqueue(from);
+            var cameFrom = new Dictionary<OperationPlace, (OperationPlace Previous, TrackStretch Via)>();
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                if (current.Equals(to))
+                {
+                    // Reconstruct path
+                    var path = new List<TrackStretch>();
+                    OperationPlace node = to;
+                    while (cameFrom.ContainsKey(node))
+                    {
+                        var (previous, via) = cameFrom[node];
+                        path.Add(via);
+                        node = previous;
+                    }
+                    path.Reverse();
+                    return path;
+                }
+
+                if (!adjacency.TryGetValue(current, out var neighbors)) continue;
+                foreach (var (stretch, next) in neighbors)
+                {
+                    if (visited.Add(next))
+                    {
+                        cameFrom[next] = (current, stretch);
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            return []; // No path found
         }
     }
 
