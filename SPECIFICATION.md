@@ -221,6 +221,7 @@ The `ActionStateMachine` determines available actions based on:
 | Accept | Arrival dispatcher | State is Requested; Previous section departed (or first section) |
 | Reject | Arrival dispatcher | State is Requested; Previous section departed (or first section) |
 | Revoke | Departure dispatcher | State is Requested or Accepted; Previous section departed (or first section) |
+| Revoke | Arrival dispatcher | State is Accepted; Previous section departed (or first section) |
 | Depart | Departure dispatcher | State is Accepted; Previous section departed (or first section) |
 | Pass | Signal controller | Departed, not on last track stretch; Previous section departed (or first section) |
 | Arrive | Arrival dispatcher | Departed and on last track stretch; Previous section departed (or first section) |

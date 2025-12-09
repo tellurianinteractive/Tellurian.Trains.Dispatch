@@ -74,7 +74,7 @@ Dispatchers interact through explicit actions. The **ActionStateMachine** determ
 |--------|--------------|-------------|
 | Request | Departure dispatcher | Request permission to dispatch |
 | Accept/Reject | Arrival dispatcher | Respond to dispatch request |
-| Revoke | Departure dispatcher | Cancel an accepted request |
+| Revoke | Either dispatcher | Cancel an accepted request (before departure) |
 | Depart | Departure dispatcher | Train leaves the station |
 | Pass | Control point dispatcher | Confirm train passed a signal |
 | Arrive | Arrival dispatcher | Train reached destination |

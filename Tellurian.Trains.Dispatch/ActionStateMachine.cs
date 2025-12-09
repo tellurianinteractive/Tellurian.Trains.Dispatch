@@ -107,6 +107,11 @@ internal class ActionStateMachine : IActionProvider
                 yield return new ActionContext(section, DispatchAction.Reject, dispatcher);
                 break;
 
+            case DispatchState.Accepted:
+                // Arrival dispatcher can revoke before train departs
+                yield return new ActionContext(section, DispatchAction.Revoke, dispatcher);
+                break;
+
             case DispatchState.Departed:
                 // Arrive is only available when on the last TrackStretch
                 if (section.IsOnLastTrackStretch)
