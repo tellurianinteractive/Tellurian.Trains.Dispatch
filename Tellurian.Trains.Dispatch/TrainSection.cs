@@ -20,6 +20,13 @@ public class TrainSection
     public DispatchState State { get; internal set; }
 
     /// <summary>
+    /// The previous <see cref="TrainSection"/> for the same train.
+    /// Null for the first section of a train's journey.
+    /// </summary>
+    [JsonIgnore]
+    public TrainSection? Previous { get; internal set; }
+
+    /// <summary>
     /// Index of the current TrackStretch the train is on.
     /// Starts at 0 when departed, increments as train passes each control point.
     /// </summary>

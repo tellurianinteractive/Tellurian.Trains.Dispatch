@@ -65,10 +65,12 @@ internal class ActionStateMachine : IActionProvider
 
     /// <summary>
     /// Gets actions available to the departure dispatcher.
+    /// For non-first sections, dispatch actions are only available after Previous section has departed.
     /// </summary>
     private static IEnumerable<ActionContext> GetDepartureDispatcherActions(TrainSection section, IDispatcher dispatcher)
     {
         if (!section.Train.IsDispatchable) yield break;
+        if (!section.IsPreviousDeparted) yield break;
 
         switch (section.State)
         {
@@ -91,10 +93,12 @@ internal class ActionStateMachine : IActionProvider
 
     /// <summary>
     /// Gets actions available to the arrival dispatcher.
+    /// For non-first sections, dispatch actions are only available after Previous section has departed.
     /// </summary>
     private static IEnumerable<ActionContext> GetArrivalDispatcherActions(TrainSection section, IDispatcher dispatcher)
     {
         if (!section.Train.IsDispatchable) yield break;
+        if (!section.IsPreviousDeparted) yield break;
 
         switch (section.State)
         {
@@ -117,10 +121,12 @@ internal class ActionStateMachine : IActionProvider
     /// Gets Pass actions for signal-controlled places the dispatcher controls.
     /// Pass actions advance the train to the next TrackStretch
     /// when a SignalControlledPlace controlled by this dispatcher is the next control point.
+    /// For non-first sections, actions are only available after Previous section has departed.
     /// </summary>
     private static IEnumerable<ActionContext> GetPassActions(TrainSection section, IDispatcher dispatcher)
     {
         if (!section.Train.IsDispatchable) yield break;
+        if (!section.IsPreviousDeparted) yield break;
         if (section.State != DispatchState.Departed) yield break;
         if (section.IsOnLastTrackStretch) yield break;
 
@@ -134,28 +140,36 @@ internal class ActionStateMachine : IActionProvider
 
     /// <summary>
     /// Gets train state actions.
+    /// First section only: Manned (when Planned), Canceled (when Planned), Running (when Manned).
+    /// Non-first sections: Aborted (when Running) only.
     /// Note: Completed is NOT an action - it's automatically triggered when the last section arrives.
     /// </summary>
     private static IEnumerable<ActionContext> GetTrainActions(TrainSection section, IDispatcher dispatcher)
     {
         var trainState = section.Train.State;
 
-        switch (trainState)
+        if (section.IsFirst)
         {
-            case TrainState.Planned:
-                yield return new ActionContext(section, DispatchAction.Manned, dispatcher);
-                yield return new ActionContext(section, DispatchAction.Canceled, dispatcher);
-                break;
+            // First section: Manned, Canceled (when Planned), Running (when Manned)
+            switch (trainState)
+            {
+                case TrainState.Planned:
+                    yield return new ActionContext(section, DispatchAction.Manned, dispatcher);
+                    yield return new ActionContext(section, DispatchAction.Canceled, dispatcher);
+                    break;
 
-            case TrainState.Manned:
-                yield return new ActionContext(section, DispatchAction.Running, dispatcher);
-                yield return new ActionContext(section, DispatchAction.Canceled, dispatcher);
-                break;
-
-            case TrainState.Running:
-                // Only Aborted is available when running - Completed is auto-triggered
+                case TrainState.Manned:
+                    yield return new ActionContext(section, DispatchAction.Running, dispatcher);
+                    break;
+            }
+        }
+        else
+        {
+            // Non-first sections: Only Aborted is available when running
+            if (trainState == TrainState.Running)
+            {
                 yield return new ActionContext(section, DispatchAction.Aborted, dispatcher);
-                break;
+            }
         }
     }
 

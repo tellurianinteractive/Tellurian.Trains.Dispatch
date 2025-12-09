@@ -172,15 +172,31 @@ The domain model separates physical infrastructure from logical dispatch routes.
   - Current `DispatchState`
   - Current `TrackStretchIndex` position
   - Departure and arrival calls
+  - `Previous` section reference (null for first section)
+
+#### TrainSection Sequencing
+
+TrainSections for the same train are linked via the `Previous` property, forming a chain that represents the train's complete journey:
+
+```
+Section 1 (Previous=null) → Section 2 → Section 3 → ... → Section N
+```
+
+This linking enables important business rules:
+- **First section**: Where Manned/Canceled actions are available
+- **Subsequent sections**: Dispatch actions only available after Previous section has departed
+- **Sequential progression**: A train must be on its way before the next TrainSection becomes actionable
 
 ### State Machines
 
 **TrainState** - Operational lifecycle:
 ```
 Planned → Manned → Running → Completed
-    ↓        ↓         ↓
-Canceled  Canceled  Aborted
+    ↓                  ↓
+Canceled           Aborted
 ```
+
+**Note:** Train state actions (Manned, Canceled) are only available on the first TrainSection. On subsequent sections, only Aborted is available.
 
 **DispatchState** - Dispatch authorization:
 ```
@@ -195,17 +211,29 @@ The `ActionStateMachine` determines available actions based on:
 - Current DispatchState and TrainState
 - Dispatcher role (departure, arrival, or signal controller)
 - Train section position (track stretch index)
+- Previous section state (for non-first sections)
+
+#### Dispatch Actions
 
 | Action | Performed By | When Available |
 |--------|--------------|----------------|
-| Request | Departure dispatcher | State is None, Rejected, or Revoked |
-| Accept | Arrival dispatcher | State is Requested |
-| Reject | Arrival dispatcher | State is Requested |
-| Revoke | Departure dispatcher | State is Requested or Accepted |
-| Depart | Departure dispatcher | State is Accepted |
-| Pass | Signal controller | Departed, not on last track stretch |
-| Arrive | Arrival dispatcher | Departed and on last track stretch |
+| Request | Departure dispatcher | State is None, Rejected, or Revoked; Previous section departed (or first section) |
+| Accept | Arrival dispatcher | State is Requested; Previous section departed (or first section) |
+| Reject | Arrival dispatcher | State is Requested; Previous section departed (or first section) |
+| Revoke | Departure dispatcher | State is Requested or Accepted; Previous section departed (or first section) |
+| Depart | Departure dispatcher | State is Accepted; Previous section departed (or first section) |
+| Pass | Signal controller | Departed, not on last track stretch; Previous section departed (or first section) |
+| Arrive | Arrival dispatcher | Departed and on last track stretch; Previous section departed (or first section) |
 | Clear | Any dispatcher | Train canceled/aborted while Departed |
+
+#### Train State Actions
+
+| Action | Performed By | When Available |
+|--------|--------------|----------------|
+| Manned | Any dispatcher | First section only; TrainState is Planned |
+| Canceled | Any dispatcher | First section only; TrainState is Planned |
+| Running | Any dispatcher | First section only; TrainState is Manned |
+| Aborted | Any dispatcher | Non-first sections only; TrainState is Running |
 
 ---
 

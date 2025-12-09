@@ -49,15 +49,31 @@ public class Broker(IBrokerDataProvider configuration, IBrokerStateProvider stat
 
         if (isRestart)
         {
-            var states = await _stateProvider.ReadTrainSections(cancellationToken).ConfigureAwait(false);
-            _trainSections = states.ToDictionary(d => d.Id);
+            var trainSections = await _stateProvider.ReadTrainSections(cancellationToken).ConfigureAwait(false);
+            _trainSections = WithUpdatedPrevious(trainSections).ToDictionary(d => d.Id);
         }
         else
         {
             var trains = await _configuration.GetTrainsAsync(cancellationToken).ConfigureAwait(false);
             var calls = await _configuration.GetTrainStationCallsAsync(cancellationToken).ConfigureAwait(false);
-            _trainSections = calls.ToTrainSections(_dispatchStretches.Values, TimeProvider, _logger).ToDictionary(c => c.Id);
+            var trainSections = calls.ToTrainSections(_dispatchStretches.Values, TimeProvider, _logger);
+            _trainSections = WithUpdatedPrevious(trainSections).ToDictionary(d => d.Id);
             var result = await Persist();
+        }
+
+        // This function eliminates the need to serialize the Previous propery and cause deep dependency graphs.
+        static IEnumerable<TrainSection> WithUpdatedPrevious(IEnumerable<TrainSection> trainSections)
+        {
+            int currentTrainId = 0;
+            TrainSection? previous = null;
+            foreach (var trainSection in trainSections.OrderBy(ts => ts.Train.Id).ThenBy(ts => ts.Departure.Scheduled.DepartureTime))
+            {
+                if (currentTrainId > 0 && currentTrainId != trainSection.Train.Id) continue;
+                trainSection.Previous = previous;
+                previous = trainSection;
+                currentTrainId = trainSection.Train.Id;
+            }
+            return trainSections;
         }
     }
 }

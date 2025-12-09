@@ -30,6 +30,7 @@ public static class TrainStationCallExtensions
             var trains = calls.GroupBy(x => x.Train.Id);
             foreach (var train in trains)
             {
+                TrainSection? previousSection = null;
                 var trainCalls = train.OrderBy(c => c.Train.Id).ThenBy(c => c.SequenceNumber).ToArray();
                 for (int i = 0; i < trainCalls.Length; i++)
                 {
@@ -37,11 +38,15 @@ public static class TrainStationCallExtensions
                     {
                         var dispatchStretch = dispatchStretches.FindFor(trainCalls[i], trainCalls[i + 1]);
                         var section = TrainSection.Create(dispatchStretch, trainCalls[i], trainCalls[i + 1], timeProvider);
+                        if (section.HasValue)
                         {
-                            ;
-                            if (section.HasValue) yield return section.Value!;
-                            if (logger.IsEnabled(LogLevel.Warning))
-                                logger.LogWarning("Failed to create {ObjectName} with {E 0rrors}", nameof(TrainSection), section.Error);
+                            section.Value!.Previous = previousSection;
+                            previousSection = section.Value;
+                            yield return section.Value!;
+                        }
+                        else if (logger.IsEnabled(LogLevel.Warning))
+                        {
+                            logger.LogWarning("Failed to create {ObjectName} with {Errors}", nameof(TrainSection), section.Error);
                         }
                     }
                 }

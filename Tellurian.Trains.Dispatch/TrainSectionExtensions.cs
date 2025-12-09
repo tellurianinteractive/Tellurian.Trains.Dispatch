@@ -12,10 +12,18 @@ public static class TrainSectionExtensions
         public Station To => trainSection.StretchDirection.To;
         public StretchDirection TrainDirection => trainSection.StretchDirection.Direction;
         internal Train Train => trainSection.Departure.Train;
-        public bool IsFirst => trainSection.Departure.SequenceNumber == 1;
+        public bool IsFirst => trainSection.Previous is null;
         public bool IsLast => trainSection.Arrival.IsDeparture == false;
         public bool IsUnmanned => trainSection.Train.State < TrainState.Manned;
         public bool IsVisibleForDispatcher => trainSection.State != DispatchState.Arrived;
+
+        /// <summary>
+        /// True if Previous section has departed or arrived, allowing dispatch actions on this section.
+        /// Always true for the first section (no previous).
+        /// </summary>
+        public bool IsPreviousDeparted =>
+            trainSection.Previous is null ||
+            trainSection.Previous.State >= DispatchState.Departed;
 
     }
 }

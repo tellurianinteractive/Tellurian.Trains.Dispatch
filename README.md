@@ -40,11 +40,13 @@ The library handles the complex logic of train dispatching, letting you focus on
 ### Train States
 ```
 Planned → Manned → Running → Completed
-    ↓        ↓         ↓
-Canceled  Canceled  Aborted
+    ↓                  ↓
+Canceled           Aborted
 ```
 
-A train progresses from scheduled (Planned) through crew assignment (Manned) to active operation (Running), then either completes normally or is canceled/aborted.
+A train progresses from scheduled (Planned) through crew assignment (Manned) to active operation (Running), then either completes normally or is aborted.
+
+**Note:** The Manned and Canceled actions are only available on the first TrainSection of a train's journey. On subsequent sections, only the Aborted action is available (when Running).
 
 ### Dispatch States
 ```
@@ -54,6 +56,15 @@ None → Requested → Accepted → Departed → Arrived
 ```
 
 Each TrainSection tracks its dispatch progress independently, from initial request through departure and arrival.
+
+### TrainSection Sequencing
+
+A train's journey consists of multiple TrainSections linked via the `Previous` property:
+
+- **First section** (`Previous` is null): This is where train state actions (Manned, Canceled) are available. A train must be Manned before its first departure can be Requested.
+- **Subsequent sections**: Dispatch actions are only available after the Previous section has departed. Only the Aborted action is available for train state changes.
+
+This ensures trains move through their journey in sequence - you cannot request departure from station B before the train has left station A.
 
 ## Action-Based Dispatch
 
