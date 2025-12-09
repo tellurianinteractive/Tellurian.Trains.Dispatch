@@ -1,402 +1,544 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Tellurian.Trains.Dispatch.Brokers;
-using Tellurian.Trains.Dispatch.Trains;
 
 namespace Tellurian.Trains.Dispatch.Tests;
 
-/// <summary>
-/// Tests for simple two-station dispatch scenario without block signals.
-/// Verifies dispatcher actions and state transitions.
-/// </summary>
 [TestClass]
 public class SimpleDispatchTests
 {
-    private Broker _broker = default!;
-    private StationDispatcher _departureDispatcher = default!;
-    private TrainSection _trainSection = default!;
+    private Broker _broker = null!;
+    private SimpleTestDataProvider _dataProvider = null!;
+    private InMemoryStateProvider _stateProvider = null!;
+    private TestTimeProvider _timeProvider = null!;
 
     [TestInitialize]
     public async Task Setup()
     {
-        var configuration = new SimpleDispatchConfiguration();
-        var stateProvider = new InMemoryStateProvider();
-        var timeProvider = new TestTimeProvider();
-        var logger = NullLogger<Broker>.Instance;
-
-        _broker = new Broker(configuration, stateProvider, timeProvider, logger);
+        _dataProvider = new SimpleTestDataProvider();
+        _stateProvider = new InMemoryStateProvider();
+        _timeProvider = new TestTimeProvider { CurrentTime = TimeSpan.FromHours(10) };
+        _broker = new Broker(_dataProvider, _stateProvider, _timeProvider, NullLogger<Broker>.Instance);
         await _broker.InitAsync(isRestart: false);
-
-        var dispatchers = _broker.GetDispatchers().Cast<StationDispatcher>().ToList();
-        _departureDispatcher = dispatchers.Single(d => d.Name == "Alpha");
-        _trainSection = _departureDispatcher.GetDepartures(1).Single();
     }
 
-    #region 1. Happy Path: Complete Dispatch Workflow
+    [TestMethod]
+    public void BrokerCreatesThreeDispatchers()
+    {
+        var dispatchers = _broker.GetDispatchers().ToList();
+        Assert.HasCount(3, dispatchers, "Should have 3 dispatchers (one per station)");
+    }
 
     [TestMethod]
-    public void Request_Accept_Departed_Arrived_CompletesDispatch()
+    public void DispatchersHaveCorrectNames()
     {
-        // Initial state
-        Assert.AreEqual(DispatchState.None, _trainSection.State);
-        Assert.AreEqual(TrainState.Planned, _trainSection.Departure.Train.State);
+        var dispatchers = _broker.GetDispatchers().ToList();
+        var signatures = dispatchers.Select(d => d.Signature).OrderBy(s => s).ToList();
 
-        // Departure dispatcher requests
-        var requestAction = GetDepartureAction(DispatchState.Requested);
-        Assert.IsTrue(requestAction());
-        Assert.AreEqual(DispatchState.Requested, _trainSection.State);
-        Assert.AreEqual(TrainState.Manned, _trainSection.Departure.Train.State);
+        CollectionAssert.AreEqual(
+            new[] { "A", "B", "C" },
+            signatures,
+            "Dispatcher signatures should be A, B, C");
+    }
 
-        // Arrival dispatcher accepts
-        var acceptAction = GetArrivalAction(DispatchState.Accepted);
-        Assert.IsTrue(acceptAction());
-        Assert.AreEqual(DispatchState.Accepted, _trainSection.State);
+    [TestMethod]
+    public void StationADispatcherHasDepartureActions()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
 
-        // Departure dispatcher marks departed
-        var departedAction = GetDepartureAction(DispatchState.Departed);
-        Assert.IsTrue(departedAction());
-        Assert.AreEqual(DispatchState.Departed, _trainSection.State);
-        Assert.AreEqual(TrainState.Running, _trainSection.Departure.Train.State);
+        // Train starts at station A, so station A should have departure actions
+        Assert.IsNotEmpty(departureActions, "Station A should have departure actions for train");
+    }
 
-        // Arrival dispatcher marks arrived
-        var arrivedAction = GetArrivalAction(DispatchState.Arrived);
-        Assert.IsTrue(arrivedAction());
-        Assert.AreEqual(DispatchState.Arrived, _trainSection.State);
-        Assert.AreEqual(TrainState.Completed, _trainSection.Departure.Train.State);
+    [TestMethod]
+    public void StationBDispatcherHasNoInitialDepartureActions()
+    {
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherB, 10).ToList();
+
+        // Train hasn't arrived at B yet, so no departure actions
+        Assert.IsEmpty(departureActions, "Station B should have no departure actions initially");
+    }
+
+    [TestMethod]
+    public void StationCDispatcherHasNoInitialActions()
+    {
+        var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherC, 10).ToList();
+        var arrivalActions = _broker.GetArrivalActionsFor(dispatcherC, 10).ToList();
+
+        // Train ends at C (no departure), and hasn't been dispatched yet
+        Assert.IsEmpty(departureActions, "Station C should have no departure actions");
+        Assert.IsEmpty(arrivalActions, "Station C should have no arrival actions initially");
+    }
+
+    [TestMethod]
+    public void InitialActionsIncludeMannedForPlannedTrain()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+
+        var mannedAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Manned);
+        Assert.IsNotNull(mannedAction, "Should have Manned action for planned train");
+    }
+
+    [TestMethod]
+    public void InitialActionsIncludeCanceledForPlannedTrain()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+
+        var canceledAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Canceled);
+        Assert.IsNotNull(canceledAction, "Should have Canceled action for planned train");
+    }
+
+    [TestMethod]
+    public void NoRequestActionAvailableForUnmannedTrain()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+
+        var requestAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Request);
+        Assert.IsNull(requestAction, "Request action should not be available for unmanned train");
+    }
+
+    #region Train State Transition Tests
+
+    [TestMethod]
+    public void ExecuteMannedChangesTrainStateToManned()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+
+        var result = mannedAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Manned action should succeed");
+        Assert.AreEqual(Trains.TrainState.Manned, mannedAction.Section.Departure.Train.State);
+    }
+
+    [TestMethod]
+    public void AfterMannedRunningActionBecomesAvailable()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var runningAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Running);
+
+        Assert.IsNotNull(runningAction, "Running action should be available after Manned");
+    }
+
+    [TestMethod]
+    public void ExecuteRunningChangesTrainStateToRunning()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        // First set train to Manned
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        // Then set to Running
+        var runningAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Running);
+        var result = runningAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Running action should succeed");
+        Assert.AreEqual(Trains.TrainState.Running, runningAction.Section.Departure.Train.State);
     }
 
     #endregion
 
-    #region 2. Request/Revoke Cycles
+    #region Dispatch State Transition Tests
 
     [TestMethod]
-    public void Request_ThenRevoke_ReturnsToRequestableState()
+    public void AfterRunningRequestActionBecomesAvailable()
     {
-        // Request
-        var requestAction = GetDepartureAction(DispatchState.Requested);
-        Assert.IsTrue(requestAction());
-        Assert.AreEqual(DispatchState.Requested, _trainSection.State);
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        SetTrainToRunning(dispatcherA);
 
-        // Revoke
-        var revokeAction = GetDepartureAction(DispatchState.Revoked);
-        Assert.IsTrue(revokeAction());
-        Assert.AreEqual(DispatchState.Revoked, _trainSection.State);
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var requestAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Request);
 
-        // Can request again
-        Assert.IsTrue(HasDepartureAction(DispatchState.Requested));
+        Assert.IsNotNull(requestAction, "Request action should be available after train is Running");
     }
 
     [TestMethod]
-    public void Request_Accept_Revoke_ReturnsToRequestableState()
+    public void ExecuteRequestChangesStateToRequested()
     {
-        // Request
-        GetDepartureAction(DispatchState.Requested)();
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        SetTrainToRunning(dispatcherA);
 
-        // Accept
-        GetArrivalAction(DispatchState.Accepted)();
-        Assert.AreEqual(DispatchState.Accepted, _trainSection.State);
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        var result = requestAction.Execute();
 
-        // Revoke (by departure dispatcher)
-        var revokeAction = GetDepartureAction(DispatchState.Revoked);
-        Assert.IsTrue(revokeAction());
-        Assert.AreEqual(DispatchState.Revoked, _trainSection.State);
+        Assert.IsTrue(result.HasValue, "Request action should succeed");
+        Assert.AreEqual(DispatchState.Requested, requestAction.Section.State);
+    }
 
-        // Can request again
-        Assert.IsTrue(HasDepartureAction(DispatchState.Requested));
+    [TestMethod]
+    public void AfterRequestAcceptActionBecomesAvailableAtArrivalStation()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
+
+        // Accept should be available at station B (arrival station for A->B stretch)
+        var arrivalActions = _broker.GetArrivalActionsFor(dispatcherB, 10).ToList();
+        var acceptAction = arrivalActions.FirstOrDefault(a => a.Action == DispatchAction.Accept);
+
+        Assert.IsNotNull(acceptAction, "Accept action should be available at arrival station after Request");
+    }
+
+    [TestMethod]
+    public void ExecuteAcceptChangesStateToAccepted()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
+
+        var acceptAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Accept);
+        var result = acceptAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Accept action should succeed");
+        Assert.AreEqual(DispatchState.Accepted, acceptAction.Section.State);
+    }
+
+    [TestMethod]
+    public void AfterAcceptDepartActionBecomesAvailable()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
+
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var departAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Depart);
+
+        Assert.IsNotNull(departAction, "Depart action should be available after Accept");
+    }
+
+    [TestMethod]
+    public void ExecuteDepartChangesStateToDeparted()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
+
+        var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Depart);
+        var result = departAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Depart action should succeed");
+        Assert.AreEqual(DispatchState.Departed, departAction.Section.State);
+    }
+
+    [TestMethod]
+    public void AfterDepartArriveActionBecomesAvailableAtArrivalStation()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
+
+        var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Depart);
+        departAction.Execute();
+
+        var arrivalActions = _broker.GetArrivalActionsFor(dispatcherB, 10).ToList();
+        var arriveAction = arrivalActions.FirstOrDefault(a => a.Action == DispatchAction.Arrive);
+
+        Assert.IsNotNull(arriveAction, "Arrive action should be available at arrival station after Depart");
+    }
+
+    [TestMethod]
+    public void ExecuteArriveChangesStateToArrived()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
+
+        var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Depart);
+        departAction.Execute();
+
+        var arriveAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Arrive);
+        var result = arriveAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Arrive action should succeed");
+        Assert.AreEqual(DispatchState.Arrived, arriveAction.Section.State);
+    }
+
+    [TestMethod]
+    public void FullDispatchWorkflowFromAToB()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+
+        // 1. Set train to Manned
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        // 2. Set train to Running
+        var runningAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Running);
+        runningAction.Execute();
+
+        // 3. Request departure from A
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
+
+        // 4. Accept at B
+        var acceptAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Accept);
+        acceptAction.Execute();
+
+        // 5. Depart from A
+        var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Depart);
+        departAction.Execute();
+
+        // 6. Arrive at B
+        var arriveAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Arrive);
+        var result = arriveAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Full workflow should complete successfully");
+        Assert.AreEqual(DispatchState.Arrived, arriveAction.Section.State);
     }
 
     #endregion
 
-    #region 3. Rejection Flow
+    #region Reject Scenario Tests
 
     [TestMethod]
-    public void Request_Reject_AllowsNewRequest()
+    public void AfterRequestRejectActionBecomesAvailableAtArrivalStation()
     {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
+
+        var arrivalActions = _broker.GetArrivalActionsFor(dispatcherB, 10).ToList();
+        var rejectAction = arrivalActions.FirstOrDefault(a => a.Action == DispatchAction.Reject);
+
+        Assert.IsNotNull(rejectAction, "Reject action should be available at arrival station after Request");
+    }
+
+    [TestMethod]
+    public void ExecuteRejectChangesStateToRejected()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
+
+        var rejectAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Reject);
+        var result = rejectAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Reject action should succeed");
+        Assert.AreEqual(DispatchState.Rejected, rejectAction.Section.State);
+    }
+
+    [TestMethod]
+    public void AfterRejectRequestActionBecomesAvailableAgain()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
         // Request
-        GetDepartureAction(DispatchState.Requested)();
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
 
         // Reject
-        var rejectAction = GetArrivalAction(DispatchState.Rejected);
-        Assert.IsTrue(rejectAction());
-        Assert.AreEqual(DispatchState.Rejected, _trainSection.State);
+        var rejectAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Reject);
+        rejectAction.Execute();
 
-        // Departure can request again
-        Assert.IsTrue(HasDepartureAction(DispatchState.Requested));
+        // Request should be available again
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var newRequestAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Request);
 
-        // Arrival has no actions
-        Assert.IsFalse(_trainSection.GetArrivalActions().Any());
+        Assert.IsNotNull(newRequestAction, "Request action should be available again after Reject");
     }
 
     #endregion
 
-    #region 4. Available Actions Verification
+    #region Revoke Scenario Tests
 
     [TestMethod]
-    public void InitialState_DepartureHasRequestAction_ArrivalHasNoActions()
+    public void AfterRequestRevokeActionBecomesAvailableAtDepartureStation()
     {
-        Assert.AreEqual(DispatchState.None, _trainSection.State);
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        SetTrainToRunning(dispatcherA);
 
-        // Departure has Request action
-        Assert.IsTrue(HasDepartureAction(DispatchState.Requested));
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
 
-        // Arrival has no actions
-        Assert.IsFalse(HasArrivalAction());
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var revokeAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Revoke);
+
+        Assert.IsNotNull(revokeAction, "Revoke action should be available at departure station after Request");
     }
 
     [TestMethod]
-    public void AfterRequest_DepartureHasRevoke_ArrivalHasAcceptReject()
+    public void ExecuteRevokeFromRequestedChangesStateToRevoked()
     {
-        GetDepartureAction(DispatchState.Requested)();
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        SetTrainToRunning(dispatcherA);
 
-        // Departure has Revoke
-        Assert.IsTrue(HasDepartureAction(DispatchState.Revoked));
-        Assert.IsFalse(HasDepartureAction(DispatchState.Requested));
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
 
-        // Arrival has Accept and Reject
-        Assert.IsTrue(HasArrivalAction(DispatchState.Accepted));
-        Assert.IsTrue(HasArrivalAction(DispatchState.Rejected));
+        var revokeAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Revoke);
+        var result = revokeAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Revoke action should succeed");
+        Assert.AreEqual(DispatchState.Revoked, revokeAction.Section.State);
     }
 
     [TestMethod]
-    public void AfterAccept_DepartureHasDepartedAndRevoke()
+    public void AfterRevokeFromRequestedRequestActionBecomesAvailableAgain()
     {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        SetTrainToRunning(dispatcherA);
 
-        // Departure has Departed and Revoke
-        Assert.IsTrue(HasDepartureAction(DispatchState.Departed));
-        Assert.IsTrue(HasDepartureAction(DispatchState.Revoked));
+        // Request
+        var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
 
-        // Arrival has no actions
-        Assert.IsFalse(_trainSection.ArrivalActions.Any());
+        // Revoke
+        var revokeAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Revoke);
+        revokeAction.Execute();
+
+        // Request should be available again
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var newRequestAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Request);
+
+        Assert.IsNotNull(newRequestAction, "Request action should be available again after Revoke");
     }
 
     [TestMethod]
-    public void AfterDeparted_OnlyArrivalHasArrivedAction()
+    public void AfterAcceptRevokeActionBecomesAvailableAtDepartureStation()
     {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-        GetDepartureAction(DispatchState.Departed)();
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
 
-        // Departure has no actions
-        Assert.IsFalse(_trainSection.DepartureActions.Any());
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var revokeAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Revoke);
 
-        // Arrival has only Arrived
-        Assert.IsTrue(HasArrivalAction(DispatchState.Arrived));
-        Assert.AreEqual(1, _trainSection.ArrivalActions.Count());
+        Assert.IsNotNull(revokeAction, "Revoke action should be available at departure station after Accept");
     }
 
     [TestMethod]
-    public void AfterArrived_NoMoreActionsAvailable()
+    public void AfterAcceptRevokeActionBecomesAvailableAtArrivalStation()
     {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-        GetDepartureAction(DispatchState.Departed)();
-        GetArrivalAction(DispatchState.Arrived)();
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
 
-        // No more actions
-        Assert.IsFalse(_trainSection.DepartureActions.Any());
-        Assert.IsFalse(_trainSection.ArrivalActions.Any());
+        var arrivalActions = _broker.GetArrivalActionsFor(dispatcherB, 10).ToList();
+        var revokeAction = arrivalActions.FirstOrDefault(a => a.Action == DispatchAction.Revoke);
 
-        // TrainSection is completed
-        Assert.AreEqual(DispatchState.Arrived, _trainSection.State);
-    }
-
-    #endregion
-
-    #region 5. Invalid State Transitions
-
-    [TestMethod]
-    public void CannotAccept_FromNoneState()
-    {
-        Assert.AreEqual(DispatchState.None, _trainSection.State);
-
-        // Accept action should not be available
-        Assert.IsFalse(HasArrivalAction(DispatchState.Accepted));
+        Assert.IsNotNull(revokeAction, "Revoke action should be available at arrival station after Accept");
     }
 
     [TestMethod]
-    public void CannotDepart_BeforeAccepted()
+    public void ExecuteRevokeFromAcceptedChangesStateToRevoked()
     {
-        GetDepartureAction(DispatchState.Requested)();
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
 
-        // Departed action should not be available
-        Assert.IsFalse(HasDepartureAction(DispatchState.Departed));
+        var revokeAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Revoke);
+        var result = revokeAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Revoke action should succeed");
+        Assert.AreEqual(DispatchState.Revoked, revokeAction.Section.State);
     }
 
     [TestMethod]
-    public void CannotArrive_BeforeDeparted()
+    public void AfterRevokeFromAcceptedRequestActionBecomesAvailableAgain()
     {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
 
-        // Arrived action should not be available
-        Assert.IsFalse(HasArrivalAction(DispatchState.Arrived));
-    }
+        // Revoke
+        var revokeAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Revoke);
+        revokeAction.Execute();
 
-    [TestMethod]
-    public void CannotRequest_WhenAlreadyRequested()
-    {
-        GetDepartureAction(DispatchState.Requested)();
+        // Request should be available again
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var newRequestAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Request);
 
-        // Request action should not be available
-        Assert.IsFalse(HasDepartureAction(DispatchState.Requested));
-    }
-
-    #endregion
-
-    #region 6. Train State Synchronization
-
-    [TestMethod]
-    public void Request_SetsTrainToManned()
-    {
-        Assert.AreEqual(TrainState.Planned, _trainSection.Departure.Train.State);
-
-        GetDepartureAction(DispatchState.Requested)();
-
-        Assert.AreEqual(TrainState.Manned, _trainSection.Departure.Train.State);
-    }
-
-    [TestMethod]
-    public void Departed_SetsTrainToRunning_OnFirstSection()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-
-        GetDepartureAction(DispatchState.Departed)();
-
-        Assert.AreEqual(TrainState.Running, _trainSection.Departure.Train.State);
-    }
-
-    [TestMethod]
-    public void Arrived_SetsTrainToCompleted_OnLastSection()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-        GetDepartureAction(DispatchState.Departed)();
-
-        GetArrivalAction(DispatchState.Arrived)();
-
-        Assert.AreEqual(TrainState.Completed, _trainSection.Departure.Train.State);
-    }
-
-    [TestMethod]
-    public void Departed_SetsDepartureTime()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-
-        // Observed is a struct with default TimeSpan values (00:00:00)
-        Assert.AreEqual(TimeSpan.Zero, _trainSection.Departure.Observed.DepartureTime);
-
-        GetDepartureAction(DispatchState.Departed)();
-
-        // After departure, observed time should match scheduled (10:00)
-        Assert.AreEqual(TimeSpan.FromHours(10), _trainSection.Departure.Observed.DepartureTime);
-    }
-
-    [TestMethod]
-    public void Arrived_SetsArrivalTime()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-        GetDepartureAction(DispatchState.Departed)();
-
-        Assert.AreEqual(TimeSpan.Zero, _trainSection.Arrival.Observed.ArrivalTime);
-
-        GetArrivalAction(DispatchState.Arrived)();
-
-        // After arrival, observed time should be set (10:30)
-        Assert.AreEqual(TimeSpan.FromHours(10.5), _trainSection.Arrival.Observed.ArrivalTime);
-    }
-
-    #endregion
-
-    #region 7. Canceled/Aborted Train Handling
-
-    [TestMethod]
-    public void CanceledTrain_HasNoDispatchActions()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-
-        // Cancel the train (train is Manned, so Cancel is available)
-        var cancelAction = GetTrainAction(TrainState.Canceled);
-        Assert.IsTrue(cancelAction());
-
-        // No dispatch actions available
-        Assert.IsFalse(_trainSection.DepartureActions.Any());
-        Assert.IsFalse(_trainSection.ArrivalActions.Any());
-    }
-
-    [TestMethod]
-    public void AbortedTrain_AfterDeparted_HasClearAction()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-        GetDepartureAction(DispatchState.Departed)();
-
-        // Abort the train (train is Running, so only Abort is available)
-        var abortAction = GetTrainAction(TrainState.Aborted);
-        Assert.IsTrue(abortAction());
-
-        // Clear action should be available
-        var clearAction = _trainSection.ClearCanceledOrAbortedTrain;
-        Assert.IsNotNull(clearAction);
-    }
-
-    [TestMethod]
-    public void ClearAbortedTrain_RemovesFromActiveTrains()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-        GetDepartureAction(DispatchState.Departed)();
-
-        // Train should be on the stretch
-        Assert.Contains(_trainSection, _trainSection.DispatchStretch.ActiveTrains);
-
-        // Abort and clear (train is Running, so only Abort is available)
-        var abortAction = GetTrainAction(TrainState.Aborted);
-        Assert.IsTrue(abortAction());
-        var clearAction = _trainSection.ClearCanceledOrAbortedTrain;
-        Assert.IsNotNull(clearAction);
-        Assert.IsTrue(clearAction());
-
-        // Train should be removed
-        Assert.DoesNotContain(_trainSection, _trainSection.DispatchStretch.ActiveTrains);
-        Assert.AreEqual(DispatchState.Canceled, _trainSection.State);
-    }
-
-    [TestMethod]
-    public void CanceledTrain_BeforeDeparted_HasNoClearAction()
-    {
-        GetDepartureAction(DispatchState.Requested)();
-        GetArrivalAction(DispatchState.Accepted)();
-
-        // Cancel before departing (train is Manned, so Cancel is available)
-        var cancelAction = GetTrainAction(TrainState.Canceled);
-        Assert.IsTrue(cancelAction());
-
-        // No clear action (train is not on the stretch)
-        Assert.IsNull(_trainSection.ClearCanceledOrAbortedTrain);
+        Assert.IsNotNull(newRequestAction, "Request action should be available again after Revoke from Accepted");
     }
 
     #endregion
 
     #region Helper Methods
 
-    private Func<bool> GetDepartureAction(DispatchState state) =>
-        _trainSection.DepartureActions.Single(a => a.State == state).Action;
+    private void SetTrainToRunning(IDispatcher departureDispatcher)
+    {
+        var mannedAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
 
-    private Func<bool> GetArrivalAction(DispatchState state) =>
-        _trainSection.ArrivalActions.Single(a => a.State == state).Action;
+        var runningAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
+            .First(a => a.Action == DispatchAction.Running);
+        runningAction.Execute();
+    }
 
-    private Func<bool> GetTrainAction(TrainState state) =>
-        _trainSection.AvailableTrainActions.Single(a => a.State == state).Action;
+    private void RequestAndAccept(IDispatcher departureDispatcher, IDispatcher arrivalDispatcher)
+    {
+        var requestAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
 
-    private bool HasDepartureAction(DispatchState state) =>
-        _trainSection.DepartureActions.Any(a => a.State == state);
-
-    private bool HasArrivalAction(DispatchState state) =>
-        _trainSection.ArrivalActions.Any(a => a.State == state);
+        var acceptAction = _broker.GetArrivalActionsFor(arrivalDispatcher, 10)
+            .First(a => a.Action == DispatchAction.Accept);
+        acceptAction.Execute();
+    }
 
     #endregion
 }

@@ -273,9 +273,7 @@ GET /api/v1/dispatchers/{id}
 Returns dispatcher with arrivals and departures, each including:
 - Train identification and schedule
 - Current state and track stretch progress
-- Available actions as clickable hrefs
-- Available train actions (manned, canceled, etc.)
-- Available pass actions for signal-controlled places
+- All available actions as clickable hrefs (dispatch, train state, and pass actions unified)
 
 **Key Response Fields:**
 ```json
@@ -286,14 +284,15 @@ Returns dispatcher with arrivals and departures, each including:
     "state": "Departed",
     "currentTrackStretch": 2,
     "totalTrackStretches": 3,
-    "actions": [{ "name": "arrived", "href": "..." }],
-    "passActions": []
+    "actions": [{ "name": "arrive", "href": "..." }]
   }],
   "departures": [{
     "id": 38,
     "state": "None",
-    "actions": [{ "name": "request", "href": "..." }],
-    "trainActions": [{ "name": "running", "href": "..." }]
+    "actions": [
+      { "name": "request", "href": "..." },
+      { "name": "manned", "href": "..." }
+    ]
   }]
 }
 ```
@@ -304,8 +303,11 @@ All actions are performed via POST to the href provided in the response:
 
 ```http
 POST /api/v1/train-sections/{id}/actions/{action}
+```
+
+For pass actions that target a specific control point:
+```http
 POST /api/v1/train-sections/{id}/actions/pass/{controlPointIndex}
-POST /api/v1/train-sections/{id}/train-actions/{action}
 ```
 
 **Why POST for Actions?**

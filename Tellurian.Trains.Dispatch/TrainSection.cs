@@ -67,6 +67,7 @@ public class TrainSection
 
     private TrainSection(DispatchStretchDirection direction, TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider)
     {
+        Id = 0; // Trigger auto-increment
         StretchDirection = direction;
         Departure = departure;
         Arrival = arrival;

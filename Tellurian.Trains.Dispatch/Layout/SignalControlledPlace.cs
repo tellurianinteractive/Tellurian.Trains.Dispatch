@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Tellurian.Trains.Dispatch.Layout;
 
 /// <summary>
@@ -32,6 +34,7 @@ namespace Tellurian.Trains.Dispatch.Layout;
 public record SignalControlledPlace(string Name, string Signature, int ControlledByDispatcherId)
     : OperationPlace(Name, Signature)
 {
+    [JsonIgnore] // To avoid circular refernces
     public IDispatcher ControlledBy { get; internal set; } = default!;
     /// <summary>
     /// True if this is a junction point with diverging routes.

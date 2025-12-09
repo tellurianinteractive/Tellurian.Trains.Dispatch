@@ -19,5 +19,11 @@ public record Station(string Name, string Signature)
     public IDispatcher Dispatcher { get; internal set; } = default!;
     public bool IsManned { get; init; } = true;
     public override bool IsControlled => true;
+
+    /// <summary>
+    /// Override to prevent circular reference with StationDispatcher in hash code calculation.
+    /// Uses base implementation which hashes by Id only.
+    /// </summary>
+    public override int GetHashCode() => base.GetHashCode();
 }
 

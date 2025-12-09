@@ -42,6 +42,7 @@ public class Broker(IBrokerDataProvider configuration, IBrokerStateProvider stat
         {
             dispatcher.Station.Dispatcher = dispatcher;
         }
+        ResolveSignalControlledPlaceControlledBy(_dispatchers, operationPlaces);
         var ts = await _configuration.GetTrackStretchesAsync(cancellationToken).ConfigureAwait(false);
         var trackStretches = ts.ToDictionary(ts => ts.Id);
         var ds = await _configuration.GetDispatchStretchesAsync(cancellationToken).ConfigureAwait(false);
@@ -59,6 +60,17 @@ public class Broker(IBrokerDataProvider configuration, IBrokerStateProvider stat
             var trainSections = calls.ToTrainSections(_dispatchStretches.Values, TimeProvider, _logger);
             _trainSections = WithUpdatedPrevious(trainSections).ToDictionary(d => d.Id);
             var result = await Persist();
+        }
+
+        static void ResolveSignalControlledPlaceControlledBy(Dictionary<int, StationDispatcher> _dispatchers, Dictionary<int, OperationPlace> operationPlaces)
+        {
+            foreach (var scp in operationPlaces.Values.OfType<SignalControlledPlace>())
+            {
+                if (_dispatchers.TryGetValue(scp.ControlledByDispatcherId, out var controller))
+                {
+                    scp.ControlledBy = controller;
+                }
+            }
         }
 
         // This function eliminates the need to serialize the Previous propery and cause deep dependency graphs.
