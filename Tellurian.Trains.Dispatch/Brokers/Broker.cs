@@ -15,7 +15,7 @@ public class Broker(IBrokerDataProvider configuration, IBrokerStateProvider stat
     private Dictionary<int, DispatchStretch> _dispatchStretches = [];
     private Dictionary<int, TrainSection> _trainSections = [];
     private Dictionary<int, StationDispatcher> _dispatchers = [];
-    private Task<bool> Persist() => _stateProvider.SaveDispatchCallsAsync(_trainSections.Values);
+    private Task<bool> Persist() => _stateProvider.SaveTrainsectionsAsync(_trainSections.Values);
 
     public ITimeProvider TimeProvider { get; } = timeProvider;
 

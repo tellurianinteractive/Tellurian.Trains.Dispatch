@@ -1,0 +1,52 @@
+﻿<Project Sdk="MSTest.Sdk/4.0.1">
+
+	<PropertyGroup>
+		<AssemblyName>Tellurian.Trains.Dispatch.Data.Tests</AssemblyName>
+		<RootNamespace>Tellurian.Trains.Dispatch.Data.Tests</RootNamespace>
+		<TestingExtensionsProfile>AllMicrosoft</TestingExtensionsProfile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="TestData\**\*.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Tellurian.Trains.Dispatch.Data\Tellurian.Trains.Dispatch.Data.csproj" />
+	  <ProjectReference Include="..\Tellurian.Trains.Dispatch\Tellurian.Trains.Dispatch.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="Microsoft.Testing.Extensions.AzureDevOpsReport" Version="2.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="Microsoft.Testing.Extensions.CrashDump" Version="2.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="Microsoft.Testing.Extensions.HangDump" Version="2.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="Microsoft.Testing.Extensions.HotReload" Version="2.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="Microsoft.Testing.Extensions.Retry" Version="2.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="2.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="MSTest.TestAdapter" Version="4.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="MSTest.TestFramework" Version="4.0.2" />
+	</ItemGroup>
+
+</Project>

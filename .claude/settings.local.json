@@ -9,7 +9,8 @@
       "mcp__microsoft-learn__microsoft_docs_fetch",
       "WebFetch(domain:fremo-stw.sourceforge.net)",
       "WebFetch(domain:www.bmertins.de)",
-      "WebFetch(domain:www.mw-modellbau.de)"
+      "WebFetch(domain:www.mw-modellbau.de)",
+      "Bash(xcopy:*)"
     ],
     "deny": [],
     "ask": []

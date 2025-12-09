@@ -10,6 +10,8 @@ public interface ITimeProvider
 
 internal class DefaultTimeProvider : ITimeProvider
 {
+    public static DefaultTimeProvider Instance { get; } = new();
+
     public TimeSpan Time(TimeSpan? scheduledTime = null) =>
         scheduledTime ?? TimeSpan.Zero;
 }

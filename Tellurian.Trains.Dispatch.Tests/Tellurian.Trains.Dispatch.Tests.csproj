@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Tellurian.Trains.Dispatch\Tellurian.Trains.Dispatch.csproj" />
+    <ProjectReference Include="..\Tellurian.Trains.Dispatch.Data\Tellurian.Trains.Dispatch.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

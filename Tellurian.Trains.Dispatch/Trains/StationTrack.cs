@@ -13,6 +13,10 @@
         /// </summary>
         public int? MaxLength { get; init; }
 
+        public bool IsMainTrack { get; init; }
+        public int DisplayOrder { get; init; }
+        public int PlatformLength { get; set; }
+
         public override string ToString() => Number;
     };
 }

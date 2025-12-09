@@ -1,13 +1,13 @@
 ﻿using System.Data;
 using Tellurian.Trains.Dispatch.Trains;
 
-namespace Tellurian.Trains.Dispatch.Data;
+namespace Tellurian.Trains.Dispatch.Data.Access;
 
 internal static class IDataRecordExtensions
 {
     extension(IDataRecord record)
     {
-        public OperationPlaceData ToOperationalPlaceData() => new()
+        public OperationPlaceRecord ToOperationalPlaceData() => new()
         {
             Id = record.GetInt("Id"),
             Name = record.GetString("Name"),
@@ -17,7 +17,17 @@ internal static class IDataRecordExtensions
             ControlledByDispatcherId = record.GetIntOrNull("ControlledByOtherStationId"),
         };
 
-        public TrackStretchData ToTrackStretchData() => new()
+        public StationTrackRecord ToStationTrackData() => new()
+        {
+            Id = record.GetInt("Id"),
+            OperationPlaceId = record.GetInt("AtStationId"),
+            TrackNumber = record.GetString("TrackNumber"),
+            IsMainTrack = record.GetBool("IsMainTrack"),
+            DisplayOrder = record.GetInt("DisplayOrder"),
+            PlatformLength = record.GetInt("PlatformLength"),
+        };
+
+        public TrackStretchRecord ToTrackStretchData() => new()
         {
             Id = record.GetInt("Id"),
             StartOperationPlaceId = record.GetInt("FromStationId"),
@@ -25,14 +35,14 @@ internal static class IDataRecordExtensions
             NumberOfTracks = record.GetInt("NumberOfTracks"),
         };
 
-        public DispatchStretchData ToDispatchStretchData() => new()
+        public DispatchStretchRecord ToDispatchStretchData() => new()
         {
             Id = record.GetInt("Id"),
             FromStationId = record.GetInt("ToStationId"),
             ToStationId = record.GetInt("ToStationId"),
         };
 
-        public TrainData ToTrainData() => new()
+        public TrainRecord ToTrainData() => new()
         {
             Id = record.GetInt("TrainId"),
             Company = new(
@@ -43,7 +53,7 @@ internal static class IDataRecordExtensions
                 record.GetInt("TrainNumber")),
         };
 
-        public TrainStationCallData ToTrainStationCallData(int sequenceNumber) => new()
+        public TrainStationCallRecord ToTrainStationCallData() => new()
         {
             Id = record.GetInt("CallId"),
             TrainId = record.GetInt("TrainId"),
@@ -51,10 +61,11 @@ internal static class IDataRecordExtensions
             IsDeparture = record.GetBool("IsDeparture"),
             OperationPlaceId = record.GetInt("AtStationId"),
             StationTrackId = record.GetInt("AtStationTrackId"),
-            SequenceNumber = sequenceNumber,
-            Scheduled = new CallTime() { 
+            Scheduled = new CallTime()
+            {
                 ArrivalTime = record.GetTime("ArrivalTime"),
-                DepartureTime= record.GetTime("DepartureTime")},
+                DepartureTime = record.GetTime("DepartureTime")
+            },
         };
 
 

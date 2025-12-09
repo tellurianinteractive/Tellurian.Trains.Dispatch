@@ -7,6 +7,7 @@
     <File Path="SPECIFICATION.md" />
     <File Path="ZN800.md" />
   </Folder>
+  <Project Path="Tellurian.Trains.Dispatch.Data.Tests/Tellurian.Trains.Dispatch.Data.Tests.csproj" Id="283e25cd-bfae-4d01-b311-0a780d5255de" />
   <Project Path="Tellurian.Trains.Dispatch.Data/Tellurian.Trains.Dispatch.Data.csproj" Id="8d2371cd-dde2-454c-b092-bffd38023fdb" />
   <Project Path="Tellurian.Trains.Dispatch.Tests/Tellurian.Trains.Dispatch.Tests.csproj" Id="57b54aab-a7ca-4e9f-aaba-60929951ad80" />
   <Project Path="Tellurian.Trains.Dispatch/Tellurian.Trains.Dispatch.csproj" />

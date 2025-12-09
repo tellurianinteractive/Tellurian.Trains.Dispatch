@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Tellurian.Trains.Dispatch.Brokers;
+using Tellurian.Trains.Dispatch.Data;
 
 namespace Tellurian.Trains.Dispatch.Tests;
 
@@ -10,6 +11,7 @@ public class SimpleDispatchTests
     private SimpleTestDataProvider _dataProvider = null!;
     private InMemoryStateProvider _stateProvider = null!;
     private TestTimeProvider _timeProvider = null!;
+    private static readonly string[] expected = ["A", "B", "C"];
 
     [TestInitialize]
     public async Task Setup()
@@ -35,7 +37,7 @@ public class SimpleDispatchTests
         var signatures = dispatchers.Select(d => d.Signature).OrderBy(s => s).ToList();
 
         CollectionAssert.AreEqual(
-            new[] { "A", "B", "C" },
+            expected,
             signatures,
             "Dispatcher signatures should be A, B, C");
     }
@@ -148,6 +150,42 @@ public class SimpleDispatchTests
 
         Assert.IsTrue(result.HasValue, "Running action should succeed");
         Assert.AreEqual(Trains.TrainState.Running, runningAction.Section.Departure.Train.State);
+    }
+
+    [TestMethod]
+    public void ExecuteCanceledChangesTrainStateToCanceled()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        // Cancel a planned train before it starts
+        var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Canceled);
+        var result = canceledAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Canceled action should succeed");
+        Assert.AreEqual(Trains.TrainState.Canceled, canceledAction.Section.Departure.Train.State);
+    }
+
+    [TestMethod]
+    public void ExecuteAbortedChangesTrainStateToAborted()
+    {
+        // Aborted is only available on non-first sections
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
+        // Complete A -> B journey
+        RequestAndAccept(dispatcherA, dispatcherB);
+        _broker.GetDepartureActionsFor(dispatcherA, 10).First(a => a.Action == DispatchAction.Depart).Execute();
+        _broker.GetArrivalActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Arrive).Execute();
+
+        // Now Aborted should be available on the second section (B->C)
+        var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Aborted);
+        var result = abortedAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Aborted action should succeed");
+        Assert.AreEqual(Trains.TrainState.Aborted, abortedAction.Section.Departure.Train.State);
     }
 
     #endregion
@@ -323,6 +361,68 @@ public class SimpleDispatchTests
 
         Assert.IsTrue(result.HasValue, "Full workflow should complete successfully");
         Assert.AreEqual(DispatchState.Arrived, arriveAction.Section.State);
+    }
+
+    [TestMethod]
+    public void FullJourneyFromAToCCompletesSuccessfully()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
+
+        // Complete full journey A -> B -> C
+        SetTrainToRunning(dispatcherA);
+
+        // A -> B
+        RequestAndAccept(dispatcherA, dispatcherB);
+        _broker.GetDepartureActionsFor(dispatcherA, 10).First(a => a.Action == DispatchAction.Depart).Execute();
+        _broker.GetArrivalActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Arrive).Execute();
+
+        // B -> C
+        var requestBC = _broker.GetDepartureActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Request);
+        requestBC.Execute();
+        _broker.GetArrivalActionsFor(dispatcherC, 10).First(a => a.Action == DispatchAction.Accept).Execute();
+        _broker.GetDepartureActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Depart).Execute();
+        var arriveAction = _broker.GetArrivalActionsFor(dispatcherC, 10).First(a => a.Action == DispatchAction.Arrive);
+        var result = arriveAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Full journey should complete successfully");
+        Assert.AreEqual(DispatchState.Arrived, arriveAction.Section.State);
+        Assert.IsTrue(arriveAction.Section.IsLast, "Final section should be marked as last");
+    }
+
+    [TestMethod]
+    public void ExecuteClearChangesDispatchStateToCanceled()
+    {
+        // Clear is available when train is Canceled/Aborted AND section is Departed
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
+        SetTrainToRunning(dispatcherA);
+
+        // Complete A -> B
+        RequestAndAccept(dispatcherA, dispatcherB);
+        _broker.GetDepartureActionsFor(dispatcherA, 10).First(a => a.Action == DispatchAction.Depart).Execute();
+        _broker.GetArrivalActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Arrive).Execute();
+
+        // Start B -> C (depart but don't arrive)
+        var requestBC = _broker.GetDepartureActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Request);
+        requestBC.Execute();
+        _broker.GetArrivalActionsFor(dispatcherC, 10).First(a => a.Action == DispatchAction.Accept).Execute();
+        _broker.GetDepartureActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Depart).Execute();
+
+        // Abort the train (available on non-first sections when Running)
+        var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Aborted);
+        abortedAction.Execute();
+
+        // Now Clear should be available on the B->C section (Departed + Aborted)
+        var clearAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Clear);
+        var result = clearAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Clear action should succeed");
+        Assert.AreEqual(DispatchState.Canceled, clearAction.Section.State);
     }
 
     #endregion

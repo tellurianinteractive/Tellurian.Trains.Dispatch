@@ -1,6 +1,6 @@
-﻿namespace Tellurian.Trains.Dispatch.Data;
+﻿namespace Tellurian.Trains.Dispatch.Data.Access;
 
-internal class DispatchStretchData
+internal class DispatchStretchRecord
 {
     public int Id { get; init; }
     public int FromStationId { get; init; }

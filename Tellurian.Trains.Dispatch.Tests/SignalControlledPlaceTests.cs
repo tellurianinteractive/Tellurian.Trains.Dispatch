@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Tellurian.Trains.Dispatch.Brokers;
+using Tellurian.Trains.Dispatch.Data;
 
 namespace Tellurian.Trains.Dispatch.Tests;
 
@@ -10,6 +11,7 @@ public class SignalControlledPlaceTests
     private SignalControlledPlaceTestDataProvider _dataProvider = null!;
     private InMemoryStateProvider _stateProvider = null!;
     private TestTimeProvider _timeProvider = null!;
+    private static readonly string[] expected = ["A", "C"];
 
     [TestInitialize]
     public async Task Setup()
@@ -38,7 +40,7 @@ public class SignalControlledPlaceTests
         var signatures = dispatchers.Select(d => d.Signature).OrderBy(s => s).ToList();
 
         CollectionAssert.AreEqual(
-            new[] { "A", "C" },
+            expected,
             signatures,
             "Dispatcher signatures should be A and C");
     }

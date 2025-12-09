@@ -1,8 +1,8 @@
 ﻿using Tellurian.Trains.Dispatch.Trains;
 
-namespace Tellurian.Trains.Dispatch.Data;
+namespace Tellurian.Trains.Dispatch.Data.Access;
 
-internal class TrainData
+internal class TrainRecord
 {
     public int Id { get; init; }
     public required Company Company { get; init; }

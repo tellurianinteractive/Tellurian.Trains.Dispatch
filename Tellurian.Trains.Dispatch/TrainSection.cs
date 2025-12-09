@@ -12,11 +12,14 @@ namespace Tellurian.Trains.Dispatch;
 /// </summary>
 public class TrainSection
 {
-    internal int Id { get; set { field = value.OrNextId; } }
+    [JsonInclude]
+    public int Id { get; internal set { field = value.OrNextId; } }
     public DispatchStretchDirection StretchDirection { get; }
+    [JsonIgnore]
     public DispatchStretch DispatchStretch => StretchDirection.DispatchStretch;
     public TrainStationCall Departure { get; }
     public TrainStationCall Arrival { get; }
+    [JsonInclude]
     public DispatchState State { get; internal set; }
 
     /// <summary>
@@ -30,6 +33,7 @@ public class TrainSection
     /// Index of the current TrackStretch the train is on.
     /// Starts at 0 when departed, increments as train passes each control point.
     /// </summary>
+    [JsonInclude]
     public int CurrentTrackStretchIndex { get; internal set; }
 
     /// <summary>
@@ -63,7 +67,7 @@ public class TrainSection
     public override string ToString() => $"{this.Train.Identity} {this.From.Signature}→{this.To.Signature}";
 
     [JsonIgnore]
-    public ITimeProvider TimeProvider { get; }
+    public ITimeProvider TimeProvider { get; private set; }
 
     private TrainSection(DispatchStretchDirection direction, TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider)
     {
@@ -72,6 +76,35 @@ public class TrainSection
         Departure = departure;
         Arrival = arrival;
         TimeProvider = timeProvider;
+    }
+
+    /// <summary>
+    /// Constructor for JSON deserialization.
+    /// </summary>
+    [JsonConstructor]
+    internal TrainSection(int id, DispatchStretchDirection stretchDirection, TrainStationCall departure, TrainStationCall arrival, DispatchState state, int currentTrackStretchIndex)
+    {
+        Id = id;
+        StretchDirection = stretchDirection;
+        Departure = departure;
+        Arrival = arrival;
+        State = state;
+        CurrentTrackStretchIndex = currentTrackStretchIndex;
+        TimeProvider = DefaultTimeProvider.Instance;
+    }
+
+    /// <summary>
+    /// Sets the time provider after JSON deserialization.
+    /// </summary>
+    public void SetTimeProvider(ITimeProvider timeProvider) => TimeProvider = timeProvider;
+
+    /// <summary>
+    /// Applies saved state from persistence.
+    /// </summary>
+    public void ApplyState(DispatchState state, int currentTrackStretchIndex)
+    {
+        State = state;
+        CurrentTrackStretchIndex = currentTrackStretchIndex;
     }
 
     /// <summary>

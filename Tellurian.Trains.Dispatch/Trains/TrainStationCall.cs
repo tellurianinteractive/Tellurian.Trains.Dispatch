@@ -15,4 +15,9 @@ public record TrainStationCall(Train Train, OperationPlace At, CallTime Schedule
     public int SequenceNumber { get; init; }
     public override string ToString() =>
         $"{At.Signature} track {PlannedTrack} arr {Scheduled.ArrivalTime:t} dep {Scheduled.DepartureTime:t}";
+
+    /// <summary>
+    /// Applies observed times from state persistence.
+    /// </summary>
+    public void ApplyObserved(CallTime observed) => Observed = observed;
 }

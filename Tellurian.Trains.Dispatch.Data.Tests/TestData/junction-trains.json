@@ -1,0 +1,68 @@
+{
+  "companies": [
+    {
+      "name": "Test Railway",
+      "signature": "TR"
+    }
+  ],
+  "trains": [
+    {
+      "id": 1,
+      "companySignature": "TR",
+      "identityPrefix": "P",
+      "identityNumber": 201
+    },
+    {
+      "id": 2,
+      "companySignature": "TR",
+      "identityPrefix": "P",
+      "identityNumber": 202
+    }
+  ],
+  "trainStationCalls": [
+    {
+      "id": 1,
+      "trainId": 1,
+      "operationPlaceId": 1,
+      "arrivalTime": "10:00",
+      "departureTime": "10:00",
+      "trackNumber": "1",
+      "isArrival": false,
+      "isDeparture": true,
+      "sequenceNumber": 1
+    },
+    {
+      "id": 2,
+      "trainId": 1,
+      "operationPlaceId": 3,
+      "arrivalTime": "10:05",
+      "departureTime": "10:05",
+      "trackNumber": "1",
+      "isArrival": true,
+      "isDeparture": false,
+      "sequenceNumber": 2
+    },
+    {
+      "id": 3,
+      "trainId": 2,
+      "operationPlaceId": 4,
+      "arrivalTime": "10:00",
+      "departureTime": "10:00",
+      "trackNumber": "1",
+      "isArrival": false,
+      "isDeparture": true,
+      "sequenceNumber": 1
+    },
+    {
+      "id": 4,
+      "trainId": 2,
+      "operationPlaceId": 1,
+      "arrivalTime": "10:04",
+      "departureTime": "10:04",
+      "trackNumber": "2",
+      "isArrival": true,
+      "isDeparture": false,
+      "sequenceNumber": 2
+    }
+  ]
+}

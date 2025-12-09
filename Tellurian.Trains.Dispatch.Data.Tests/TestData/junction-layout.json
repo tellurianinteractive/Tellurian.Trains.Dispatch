@@ -1,0 +1,82 @@
+{
+  "operationPlaces": [
+    {
+      "id": 1,
+      "name": "Station A",
+      "signature": "A",
+      "type": "Station",
+      "isManned": true,
+      "tracks": [
+        { "number": "1" },
+        { "number": "2" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Signal B",
+      "signature": "B",
+      "type": "SignalControlledPlace",
+      "controlledByDispatcherId": 1,
+      "isJunction": true,
+      "tracks": []
+    },
+    {
+      "id": 3,
+      "name": "Station C",
+      "signature": "C",
+      "type": "Station",
+      "isManned": true,
+      "tracks": [
+        { "number": "10" },
+        { "number": "1" },
+        { "number": "2" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Station D",
+      "signature": "D",
+      "type": "Station",
+      "isManned": true,
+      "tracks": [
+        { "number": "1" },
+        { "number": "2" },
+        { "number": "3" },
+        { "number": "4" },
+        { "number": "5" }
+      ]
+    }
+  ],
+  "trackStretches": [
+    {
+      "id": 1,
+      "startId": 1,
+      "endId": 2,
+      "numberOfTracks": 1
+    },
+    {
+      "id": 2,
+      "startId": 2,
+      "endId": 3,
+      "numberOfTracks": 1
+    },
+    {
+      "id": 3,
+      "startId": 2,
+      "endId": 4,
+      "numberOfTracks": 1
+    }
+  ],
+  "dispatchStretches": [
+    {
+      "id": 1,
+      "fromStationId": 1,
+      "toStationId": 3
+    },
+    {
+      "id": 2,
+      "fromStationId": 4,
+      "toStationId": 1
+    }
+  ]
+}
