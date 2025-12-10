@@ -1,32 +1,32 @@
 # Testing Strategy
-This document describes how the Tellurian.Trains.Dispatch 
+This document describes how the Tellurian.Trains.Dispatch
 model and dispatch rules should be tested.
 
 ## Test Cases
 This document describes test cases in form of layout examples.
 For each of these test cases, approriate tests should be created.
-Tests shoud also be adapted to changing requiremenst and 
+Tests shoud also be adapted to changing requiremenst and
 adapt the tests using the test cases.
-In each test case, there is also a guideline what to focus tests on 
+In each test case, there is also a guideline what to focus tests on
 
 ## Test Data
-For each test case, suitable test data shoul be created. 
-Implement **IBrokerDataProvider** for each test data set, 
+For each test case, suitable test data shoul be created.
+Implement **IBrokerDataProvider** for each test data set,
 and load it with the Broker.InitAsync.
 
 # Test Case Definitions
 Subsections to this chapter describe each *test layout*.
 
-A *test layout* is defined using **OperationalPlace** and 
-**TrackStretch** definitions. **DispatchStretches** should be created 
+A *test layout* is defined using **OperationalPlace** and
+**TrackStretch** definitions. **DispatchStretches** should be created
 between **Stations**. A *test layout* may contain branches.
 
 A **Station** or **SignalControlledPlace** is regarede as junction if
 there are more than one incoming or outgoing **TrackStretch**.
 
-**Train** and **TrainStationCalls** should be created that covers the 
+**Train** and **TrainStationCalls** should be created that covers the
 test layout. This could be more than one **Train**, each with its own sequence
-of **TrainStationCalls**. A train can only travel either in forward or backward direstion 
+of **TrainStationCalls**. A train can only travel either in forward or backward direstion
 of all **TrackStretches** it passes. Use the **TrackStretch** length to calculate
 travel times between **OperationalPlaces**. On a single track, train timetable must ensure that trains only meet.
 
@@ -58,7 +58,7 @@ TrackStretch B->C length 15m, single track
 ```
 
 ### Test focus
-The passing of SignalControlledPlace, and it can be performed 
+The passing of SignalControlledPlace, and it can be performed
 from when a train enters the stretch beteween station A and place B.
 
 ## Junction Case
@@ -85,35 +85,37 @@ train A-B-C has passed B. Both trains can have the same time at B.
 This case is based on a part of an actual layout.
 Station signature within paranteses.
 
+![Advanced Test Case](Advanced-Test-Case.jpg)
+
 Create 4 trains with minimum time
 spacing for each of the suggested train routes, and in the
-order of the suggested train routes 
+order of the suggested train routes
 
 ```
-Station Munkeröd (Mkd) with tracks 1-4
-SignalControlledPlace 'Kyrkeby Ö' (Kyö) controlled by Mkd
-Station Devsjö (Djö) with tracks 1-3
+Station MunkerÃ¶d (Mkd) with tracks 1-4
+SignalControlledPlace 'Kyrkeby Ã–' (KyÃ¶) controlled by Mkd
+Station DevsjÃ¶ (DjÃ¶) with tracks 1-3
 OtherPlace 'Kyrkeby Strand' (Ksd) track 1
-SignalControlledPlace Gården (Gdn) controlled by Mht
+SignalControlledPlace GÃ¥rden (Gdn) controlled by Mht
 Station Froland (Fro) with tracks 1-2
 Station Mohult (Mht) with tracks 1-3
 
-TrackStretch Mkd->Kyö 7m, double track
-TrackStretch Kyö->Djö 15m, double track
-TrackStretch Kyö->Ksd 3m, single track
+TrackStretch Mkd->KyÃ¶ 7m, double track
+TrackStretch KyÃ¶->DjÃ¶ 15m, double track
+TrackStretch KyÃ¶->Ksd 3m, single track
 TrackStretch Ksd->Gdn 4m, single track
 TrackStretch Fro->Gdn 6m, single track
 TrackStretch Gdn->Mht 10m, single track
 
 Suggested train routes:
-Mkd-Kyö-Djö
-Mht-Gnd-Ksd-Kyö-Mkd
+Mkd-KyÃ¶-DjÃ¶
+Mht-Gnd-Ksd-KyÃ¶-Mkd
 Fro-Gnd-Mht
-Djö-Kyö-Mkd
+DjÃ¶-KyÃ¶-Mkd
 Mht-Gdn-Fro
-Mkd-Kyö-Ksd-Gdn-Mht
+Mkd-KyÃ¶-Ksd-Gdn-Mht
 ```
 
 ## Test Focus
 Several trains in motion. Here track capacity should be tested,
-and that trains does not meet between Kyö-Mht and Fro-Mht.
+and that trains does not meet between KyÃ¶-Mht and Fro-Mht.
