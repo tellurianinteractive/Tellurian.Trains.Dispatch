@@ -2,6 +2,8 @@
 
 This document analyzes the proposed new approach in `STATEPROVIDER_NEW_APPROACH.md`, identifies gaps, and provides a detailed implementation plan.
 
+> **Status Update (2025-12-10):** All issues and decision points have been resolved. The documents are now in sync and ready for implementation. See Part 2 for issue status and Part 5 for decisions.
+
 ## Part 1: Analysis of Current Implementation
 
 ### Current State Provider Architecture
@@ -42,7 +44,7 @@ State changes happen in these locations:
 
 ## Part 2: Issues and Gaps in Proposed Approach
 
-### 2.1 Missing State Types
+### 2.1 Missing State Types ✅ RESOLVED
 
 **Issue:** The document proposes three providers but doesn't fully cover all state that needs persistence.
 
@@ -58,7 +60,12 @@ State changes happen in these locations:
 
 **Recommendation:** The `CurrentTrackStretchIndex` should be included in `DispatcherStateProvider` alongside `DispatchState` changes, as they are logically coupled (Pass action changes the index).
 
-### 2.2 TrackStateProvider Scope Unclear
+**Resolution:** NEW_APPROACH now includes:
+- `TrackStretchIndex` column in dispatch-state.csv (set on Departed, updated on Pass)
+- `TrackChange` ChangeType in train-state.csv with `NewTrack` column
+- TrackStretchOccupancy explicitly stated as derivable from dispatch state
+
+### 2.2 TrackStateProvider Scope Unclear ✅ RESOLVED
 
 **Issue:** The document says "track on a track section" but doesn't clarify:
 - Does this mean `StationTrack` (at stations)?
@@ -76,7 +83,9 @@ State changes happen in these locations:
 - OR, rename to `TrackStretchOccupancyStateProvider` and clarify its purpose
 - Track *changes* at stations (NewTrackNumber) should go in `TrainStateProvider`
 
-### 2.3 Signal Controlled Place Pass Events
+**Resolution:** NEW_APPROACH explicitly states: "A separate TrackStateProvider for track occupancy is not needed, as occupancy can be reconstructed from dispatch state." Track changes (NewTrackNumber) are handled by TrainStateProvider as `TrackChange` events.
+
+### 2.3 Signal Controlled Place Pass Events ✅ RESOLVED
 
 **Issue:** The document mentions "signal controlled places change state (e.g., passed)" but:
 - SignalControlledPlace itself doesn't have state - it's a configuration object
@@ -85,7 +94,9 @@ State changes happen in these locations:
 
 **Recommendation:** Clarify that Pass events track the *train's passage* through a SignalControlledPlace, not the place's own state. This belongs in `DispatcherStateProvider` as a Pass event record.
 
-### 2.4 Missing TrainState.Undo
+**Resolution:** NEW_APPROACH now correctly states: "Pass events track the *train's passage* through a SignalControlledPlace, not the place's own state. The pass action advances the train's `CurrentTrackStretchIndex`." The CSV format includes `Pass` as a ChangeType with `SignalPlaceId` and `TrackStretchIndex`.
+
+### 2.4 Missing TrainState.Undo ✅ RESOLVED
 
 **Issue:** The `TrainState` enum includes `Undo` state, but the document doesn't mention how undo operations affect the event log.
 
@@ -94,7 +105,13 @@ State changes happen in these locations:
 2. Mark previous events as undone
 3. Physical deletion of events (not recommended)
 
-### 2.5 CSV Library Not Specified
+**Resolution:** NEW_APPROACH now has a detailed "Undo Train State" section that:
+- Clarifies `Undo` is an action, not a state
+- Explains the reversal writes the *resulting state* (e.g., Running after undoing Aborted)
+- Proposes domain model changes: `Train.PreviousState` property, remove `TrainState.Undo` enum value
+- This follows option 1 (log reversal as new event)
+
+### 2.5 CSV Library Not Specified ✅ RESOLVED
 
 **Issue:** The document says "use existing CSV libraries" but doesn't recommend one.
 
@@ -104,7 +121,9 @@ State changes happen in these locations:
 - Supports async operations
 - Handles complex type mapping
 
-### 2.6 Thread Safety Not Addressed
+**Resolution:** NEW_APPROACH now has a "CSV Library" section specifying CsvHelper with the same rationale.
+
+### 2.6 Thread Safety Not Addressed ✅ RESOLVED
 
 **Issue:** The document doesn't mention concurrent access handling. The current implementation uses `SemaphoreSlim(1,1)` for thread safety.
 
@@ -112,7 +131,12 @@ State changes happen in these locations:
 - Non-blocking write attempts (if write in progress, skip)
 - Async reads with proper locking
 
-### 2.7 File Format Details Missing
+**Resolution:** NEW_APPROACH now has a "Thread Safety and File Access" section that:
+- Keeps file open in append mode during session
+- Ensures writes are never skipped (different from old semaphore pattern)
+- Explains reading only happens at restart when broker is not operational
+
+### 2.7 File Format Details Missing ✅ RESOLVED
 
 **Issue:** CSV column structure not defined.
 
@@ -143,7 +167,13 @@ Timestamp,CallId,ChangeType,Value
 2024-01-15T10:30:00Z,1,TrackChange,2A
 ```
 
-### 2.8 Migration Strategy Missing
+**Resolution:** NEW_APPROACH now has detailed CSV schemas with:
+- `ChangeType` column in both files to differentiate record types
+- `train-state.csv`: Timestamp, ChangeType (State/ObservedArrival/ObservedDeparture/TrackChange), TrainId, CallId, State, Time, NewTrack
+- `dispatch-state.csv`: Timestamp, ChangeType (State/Pass), SectionId, State, TrackStretchIndex, SignalPlaceId
+- Complete examples with realistic data
+
+### 2.8 Migration Strategy Missing ✅ RESOLVED (Not Needed)
 
 **Issue:** No mention of how to migrate from current JSON-based state to new CSV-based event log.
 
@@ -153,7 +183,9 @@ Timestamp,CallId,ChangeType,Value
 3. Delete or archive JSON file
 4. Continue with event-sourced approach
 
-### 2.9 Performance Considerations
+**Resolution:** No backward compatibility is required. The existing `IBrokerStateProvider` and JSON implementation can be replaced entirely. Sessions will start fresh with the new CSV-based approach.
+
+### 2.9 Performance Considerations ✅ RESOLVED (Not a Concern)
 
 **Issue:** Reading all historical events could be slow for long sessions.
 
@@ -162,7 +194,9 @@ Timestamp,CallId,ChangeType,Value
 2. Or accept linear read time for simplicity (typical sessions may be short)
 3. Document expected performance characteristics
 
-### 2.10 Injection Points Not Specified
+**Resolution:** Performance is not a concern. Expected maximum is ~2000 records per CSV file (train state, call changes, dispatch state). Reading 2000 CSV records is fast enough that no compaction or snapshot mechanism is needed.
+
+### 2.10 Injection Points Not Specified ✅ RESOLVED
 
 **Issue:** The document mentions "injecting the state provider into various parts of the broker" but doesn't specify where.
 
@@ -178,6 +212,10 @@ Timestamp,CallId,ChangeType,Value
 
 Option 1 (event dispatch) is most aligned with event-sourcing but adds complexity.
 Option 3 (broker mediator) is simpler and maintains existing patterns.
+
+**Resolution:** Use **direct calls** (Option 2/3 hybrid). The state providers will be injected into the Broker, which will call them directly after state changes occur. This is simpler than event dispatch and sufficient for this use case. Key injection points:
+- `ActionContextExtensions.Execute()` - call state provider after action succeeds
+- Broker holds the composite state provider and passes it where needed
 
 ---
 
@@ -363,17 +401,16 @@ public interface ICompositeStateProvider
 
 ## Part 5: Decision Points for Discussion
 
-1. **TrackStateProvider necessity:** Is track occupancy state truly needed, or can it be reconstructed from dispatch state?
+| # | Decision Point | Status |
+|---|----------------|--------|
+| 1 | **TrackStateProvider necessity:** Is track occupancy state truly needed, or can it be reconstructed from dispatch state? | ✅ **DECIDED:** Not needed - occupancy reconstructed from dispatch state |
+| 2 | **Event dispatch vs direct calls:** Should state recording use events or direct method calls? | ✅ **DECIDED:** Direct calls - simpler and sufficient for this use case |
+| 3 | **Composite vs individual providers:** Should Broker take individual providers or a composite? | ✅ **DECIDED:** Composite provider is acceptable |
+| 4 | **Existing interface compatibility:** Should `IBrokerStateProvider` be kept for backward compatibility, or replaced entirely? | ✅ **DECIDED:** No backward compatibility needed - can replace entirely |
+| 5 | **Performance threshold:** At what event count should compaction/snapshots be considered? | ✅ **DECIDED:** Not needed - max ~2000 records per file expected, reading is fast enough |
+| 6 | **CSV library:** Confirm CsvHelper as the library choice. | ✅ **DECIDED:** CsvHelper confirmed |
 
-2. **Event dispatch vs direct calls:** Should state recording use events or direct method calls?
-
-3. **Composite vs individual providers:** Should Broker take individual providers or a composite?
-
-4. **Existing interface compatibility:** Should `IBrokerStateProvider` be kept for backward compatibility, or replaced entirely?
-
-5. **Performance threshold:** At what event count should compaction/snapshots be considered?
-
-6. **CSV library:** Confirm CsvHelper as the library choice.
+> **All decision points resolved (2025-12-10)**
 
 ---
 
@@ -381,18 +418,15 @@ public interface ICompositeStateProvider
 
 Based on the analysis above, consider adding these sections:
 
-1. **CurrentTrackStretchIndex persistence** - clarify this is part of DispatcherStateProvider
+| # | Suggestion | Status |
+|---|------------|--------|
+| 1 | **CurrentTrackStretchIndex persistence** - clarify this is part of DispatcherStateProvider | ✅ Added |
+| 2 | **Track change tracking** - clarify NewTrackNumber goes in TrainStateProvider | ✅ Added |
+| 3 | **TrackStateProvider clarification** - define whether this is needed or can be derived | ✅ Added |
+| 4 | **CSV schema definitions** - explicit column formats for each provider | ✅ Added |
+| 5 | **Thread safety requirements** - semaphore pattern | ✅ Added |
+| 6 | **Migration strategy** - from existing JSON state | ✅ Not needed (clean start) |
+| 7 | **Injection strategy** - where state providers get called | ✅ Direct calls decided |
+| 8 | **CsvHelper** as the recommended library | ✅ Added |
 
-2. **Track change tracking** - clarify NewTrackNumber goes in TrainStateProvider
-
-3. **TrackStateProvider clarification** - define whether this is needed or can be derived
-
-4. **CSV schema definitions** - explicit column formats for each provider
-
-5. **Thread safety requirements** - semaphore pattern
-
-6. **Migration strategy** - from existing JSON state
-
-7. **Injection strategy** - where state providers get called
-
-8. **CsvHelper** as the recommended library
+> **All suggestions resolved (2025-12-10)** - Documents are in sync and ready for implementation.

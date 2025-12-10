@@ -78,9 +78,48 @@ Important considerations:
 ### Injecting State Providers
 
 The state provider must be able to write state changes as they happen.
-This may require injecting the state provider into various parts of the broker
-where state changes occur. Finding the right places to inject the state providers
-and ensuring they are called correctly is crucial for accurate state tracking.
+This requires injecting the state provider into the broker where state changes occur.
+
+**Injection Strategy: Direct Calls**
+
+Use direct method calls (not events) for simplicity:
+- The Broker holds a composite state provider that combines TrainStateProvider and DispatchStateProvider.
+- After an action succeeds in `ActionContextExtensions.Execute()`, call the appropriate state provider method.
+- The composite provider coordinates writing to both CSV files as needed.
+
+**Key Injection Points:**
+- `ActionContextExtensions.Execute()` - After dispatch actions (Request, Accept, Depart, Pass, Arrive, etc.)
+  and train actions (Manned, Running, Canceled, Aborted, Completed, Undo).
+- Where observed times are set on TrainStationCall.
+- Where track changes are applied to TrainStationCall.
+
+### Composite State Provider
+
+A composite interface combines TrainStateProvider and DispatchStateProvider for easier broker integration:
+
+```csharp
+public interface ICompositeStateProvider
+{
+    ITrainStateProvider TrainStateProvider { get; }
+    IDispatchStateProvider DispatchStateProvider { get; }
+
+    Task ApplyAllStateAsync(IBroker broker, CancellationToken cancellationToken = default);
+    Task ClearAllAsync(CancellationToken cancellationToken = default);
+    bool HasAnySavedState { get; }
+}
+```
+
+### Performance Expectations
+
+Expected maximum is approximately 2000 records per CSV file per session.
+At this scale, reading all records sequentially during broker restart is fast enough.
+No compaction, snapshots, or other optimization mechanisms are needed.
+
+### Migration from Previous Implementation
+
+No migration from the previous JSON-based `IBrokerStateProvider` is required.
+The existing implementation can be replaced entirely. Sessions will start fresh
+with the new CSV-based event-sourced approach.
 
 ## Train State Provider
 
@@ -120,23 +159,22 @@ File: `train-state.csv`
 
 Columns:
 - `Timestamp` - ISO 8601 format timestamp of when the change occurred
-- `ChangeType` - Type of change: `State`, `ObservedTime`, `TrackChange`
-- `TrainId` - Train identifier (for State changes)
-- `CallId` - Call identifier (for ObservedTime and TrackChange)
+- `ChangeType` - Type of change: `State`, `ObservedArrival`, `ObservedDeparture`, `TrackChange`
+- `TrainId` - Train identifier (for all change types)
+- `CallId` - Call identifier (for ObservedArrival, ObservedDeparture, and TrackChange)
 - `State` - New train state (for State changes)
-- `ArrivalTime` - Observed arrival time as TimeSpan (for ObservedTime)
-- `DepartureTime` - Observed departure time as TimeSpan (for ObservedTime)
+- `Time` - Observed time as TimeSpan (for ObservedArrival and ObservedDeparture)
 - `NewTrack` - New track number (for TrackChange)
 
 Example:
 ```csv
-Timestamp,ChangeType,TrainId,CallId,State,ArrivalTime,DepartureTime,NewTrack
-2024-01-15T10:30:00Z,State,1,,Manned,,,
-2024-01-15T10:32:00Z,State,1,,Running,,,
-2024-01-15T10:35:00Z,ObservedTime,,1,,,10:35:00,
-2024-01-15T10:36:00Z,TrackChange,,2,,,,2A
-2024-01-15T10:45:00Z,ObservedTime,,2,,10:45:00,,
-2024-01-15T11:00:00Z,State,1,,Completed,,,
+Timestamp,ChangeType,TrainId,CallId,State,Time,NewTrack
+2024-01-15T10:30:00Z,State,1,,Manned,,
+2024-01-15T10:32:00Z,State,1,,Running,,
+2024-01-15T10:35:00Z,ObservedDeparture,1,1,,10:35:00,
+2024-01-15T10:36:00Z,TrackChange,1,2,,,2A
+2024-01-15T10:45:00Z,ObservedArrival,1,2,,10:45:00,
+2024-01-15T11:00:00Z,State,1,,Completed,,
 ```
 
 ## Dispatch State Provider
@@ -198,9 +236,10 @@ passed from the broker.
 **For TrainStateProvider:**
 1. Read all records from `train-state.csv` ordered by timestamp.
 2. For each `State` record, find the train by TrainId and set its State.
-3. For each `ObservedTime` record, find the call by CallId and set observed times.
-4. For each `TrackChange` record, find the call by CallId and set the new track.
-5. After processing, trains with final state Completed, Canceled, or Aborted
+3. For each `ObservedArrival` record, find the call by CallId and set the observed arrival time.
+4. For each `ObservedDeparture` record, find the call by CallId and set the observed departure time.
+5. For each `TrackChange` record, find the call by CallId and set the new track.
+6. After processing, trains with final state Completed, Canceled, or Aborted
    can be filtered out from active dispatching.
 
 **For DispatchStateProvider:**
