@@ -156,7 +156,7 @@ internal class ActionStateMachine : IActionProvider
 
         if (section.IsFirst)
         {
-            // First section: Manned, Canceled (when Planned), Running (when Manned)
+            // First section: Manned (when Planned), Canceled (when Planned or Manned), Running (when Manned)
             switch (trainState)
             {
                 case TrainState.Planned:
@@ -166,6 +166,7 @@ internal class ActionStateMachine : IActionProvider
 
                 case TrainState.Manned:
                     yield return new ActionContext(section, DispatchAction.Running, dispatcher);
+                    yield return new ActionContext(section, DispatchAction.Canceled, dispatcher);
                     break;
             }
         }

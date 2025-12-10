@@ -40,13 +40,26 @@ The library handles the complex logic of train dispatching, letting you focus on
 ### Train States
 ```
 Planned → Manned → Running → Completed
-    ↓                  ↓
-Canceled           Aborted
+   ↓         ↓         ↓
+Canceled  Canceled  Aborted
 ```
 
-A train progresses from scheduled (Planned) through crew assignment (Manned) to active operation (Running), then either completes normally or is aborted.
+A train progresses from scheduled (Planned) through crew assignment (Manned) to active operation (Running), then either completes normally or is aborted. A train can be canceled before it starts running (from Planned or Manned state).
 
 **Note:** The Manned and Canceled actions are only available on the first TrainSection of a train's journey. On subsequent sections, only the Aborted action is available (when Running).
+
+#### Undo Train State
+
+Dispatchers can undo certain train state changes to correct mistakes. The undo reverts to whatever state the train was in before the change:
+
+| Current State | Previous State | Undo Reverts To | Display Name |
+|---------------|----------------|-----------------|--------------|
+| Manned | Planned | Planned | "Undo Manned" |
+| Canceled | Planned | Planned | "Undo Canceled" |
+| Canceled | Manned | Manned | "Undo Canceled" |
+| Aborted | Running | Running | "Undo Aborted" |
+
+The undo action is only available immediately after the state change (one level of undo). Once undone, the train returns to its previous state and undo is no longer available until another state change occurs.
 
 ### Dispatch States
 ```

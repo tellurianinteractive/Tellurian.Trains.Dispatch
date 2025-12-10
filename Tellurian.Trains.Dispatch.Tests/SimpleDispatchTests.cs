@@ -690,6 +690,47 @@ public class SimpleDispatchTests
     }
 
     [TestMethod]
+    public void CanceledActionIsAvailableFromMannedState()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        // Set train to Manned
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        // Canceled should be available from Manned state
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var canceledAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Canceled);
+
+        Assert.IsNotNull(canceledAction, "Canceled action should be available from Manned state");
+    }
+
+    [TestMethod]
+    public void ExecuteUndoTrainStateRevertsFromCanceledToManned()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        // Set train to Manned first
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        // Cancel the manned train
+        var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Canceled);
+        canceledAction.Execute();
+
+        // Undo the cancellation - should revert to Manned
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+        var result = undoAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "UndoTrainState action should succeed");
+        Assert.AreEqual(Trains.TrainState.Manned, undoAction.Section.Departure.Train.State);
+    }
+
+    [TestMethod]
     public void ExecuteUndoTrainStateRevertsFromAbortedToRunning()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");

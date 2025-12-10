@@ -192,11 +192,11 @@ This linking enables important business rules:
 **TrainState** - Operational lifecycle:
 ```
 Planned → Manned → Running → Completed
-    ↓                  ↓
-Canceled           Aborted
+   ↓         ↓         ↓
+Canceled  Canceled  Aborted
 ```
 
-**Note:** Train state actions (Manned, Canceled) are only available on the first TrainSection. On subsequent sections, only Aborted is available.
+**Note:** Train state actions (Manned, Canceled) are only available on the first TrainSection. On subsequent sections, only Aborted is available. Manned, Canceled, and Aborted states can be undone to revert to the previous state (see Undo Train State section below).
 
 **DispatchState** - Dispatch authorization:
 ```
@@ -232,9 +232,27 @@ The `ActionStateMachine` determines available actions based on:
 | Action | Performed By | When Available |
 |--------|--------------|----------------|
 | Manned | Any dispatcher | First section only; TrainState is Planned |
-| Canceled | Any dispatcher | First section only; TrainState is Planned |
+| Canceled | Any dispatcher | First section only; TrainState is Planned or Manned |
 | Running | Any dispatcher | First section only; TrainState is Manned |
 | Aborted | Any dispatcher | Non-first sections only; TrainState is Running |
+| UndoTrainState | Any dispatcher | TrainState is Manned, Canceled, or Aborted |
+
+#### Undo Train State
+
+The UndoTrainState action allows dispatchers to correct mistakes by reverting to the previous state:
+
+| Current State | Previous State | Reverts To | Display Name |
+|---------------|----------------|------------|--------------|
+| Manned | Planned | Planned | "Undo Manned" |
+| Canceled | Planned | Planned | "Undo Canceled" |
+| Canceled | Manned | Manned | "Undo Canceled" |
+| Aborted | Running | Running | "Undo Aborted" |
+
+**Key behaviors:**
+- Only one level of undo is supported (the most recent state change)
+- After undo, the `PreviousState` is cleared and undo is no longer available
+- The `DisplayName` property on `ActionContext` provides the appropriate UI label (e.g., "Undo Manned")
+- Undo is not available for Running or Completed states
 
 ---
 
@@ -284,14 +302,16 @@ Returns dispatcher with arrivals and departures, each including:
     "state": "Departed",
     "currentTrackStretch": 2,
     "totalTrackStretches": 3,
-    "actions": [{ "name": "arrive", "href": "..." }]
+    "actions": [{ "name": "arrive", "displayName": "Arrive", "href": "..." }]
   }],
   "departures": [{
     "id": 38,
+    "trainState": "Manned",
     "state": "None",
     "actions": [
-      { "name": "request", "href": "..." },
-      { "name": "manned", "href": "..." }
+      { "name": "request", "displayName": "Request", "href": "..." },
+      { "name": "running", "displayName": "Running", "href": "..." },
+      { "name": "undoTrainState", "displayName": "Undo Manned", "href": "..." }
     ]
   }]
 }
