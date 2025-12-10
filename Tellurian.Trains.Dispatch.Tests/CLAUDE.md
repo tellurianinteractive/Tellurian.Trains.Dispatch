@@ -85,7 +85,7 @@ train A-B-C has passed B. Both trains can have the same time at B.
 This case is based on a part of an actual layout.
 Station signature within paranteses.
 
-![Advanced Test Case](Advanced-Test-Case.jpg)
+![Advanced Test Case](Advanced-Test-Case.png)
 
 Create 4 trains with minimum time
 spacing for each of the suggested train routes, and in the
