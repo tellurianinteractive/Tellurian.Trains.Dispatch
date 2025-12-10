@@ -92,13 +92,13 @@ spacing for each of the suggested train routes, and in the
 order of the suggested train routes
 
 ```
-Station Munkeröd (Mkd) with tracks 1-4
+Station Munkeröd (Mkd) with tracks 1a, 1b, 2, 3, 4a, 4b where 1a,1b,4a,4b have platform length 2.5 meters
 SignalControlledPlace 'Kyrkeby Ö' (Kyö) controlled by Mkd
-Station Devsjö (Djö) with tracks 1-3
+Station Devsjö (Djö) with tracks 1-3 with platform length 5 meters
 OtherPlace 'Kyrkeby Strand' (Ksd) track 1
 SignalControlledPlace Gården (Gdn) controlled by Mht
-Station Froland (Fro) with tracks 1-2
-Station Mohult (Mht) with tracks 1-3
+Station Froland (Fro) with tracks 1-2 with track 1 platform length 1 meter
+Station Mohult (Mht) with tracks 1-3 with track 1-2 platform length 3 meters
 
 TrackStretch Mkd->Kyö 7m, double track
 TrackStretch Kyö->Djö 15m, double track
