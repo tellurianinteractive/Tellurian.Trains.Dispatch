@@ -4,6 +4,32 @@ root = true
 # C# files
 [*.cs]
 
+#### Roslyn Analyzer Suppressions ####
+
+# CA1034: Nested types should not be visible - common pattern with extension method groupings
+dotnet_diagnostic.CA1034.severity = none
+
+# CA1305: Specify IFormatProvider - not needed for invariant time formats in this domain
+dotnet_diagnostic.CA1305.severity = none
+
+# CA1716: Identifiers should not match keywords - Option<T> is intentional
+dotnet_diagnostic.CA1716.severity = none
+
+# CA1000: Do not declare static members on generic types - common pattern for factory methods
+dotnet_diagnostic.CA1000.severity = none
+
+# CA1708: Identifiers should differ by more than case - false positive with C# 13 extension blocks
+dotnet_diagnostic.CA1708.severity = none
+
+# CA1822: Member does not access instance data - suppress for properties used in pattern matching
+dotnet_diagnostic.CA1822.severity = suggestion
+
+# CA1848: Use LoggerMessage delegates - performance optimization, can be done later
+dotnet_diagnostic.CA1848.severity = suggestion
+
+# CA1707: Remove underscores from member names - allow in test methods (naming convention)
+dotnet_diagnostic.CA1707.severity = none
+
 #### Core EditorConfig Options ####
 
 # Indentation and spacing

@@ -17,7 +17,7 @@ public class TrackStretchCapacityManager
     /// <summary>
     /// Checks if a train can occupy the given TrackStretch in the specified direction.
     /// </summary>
-    public bool CanOccupy(TrainSection section, TrackStretch trackStretch, StretchDirection direction)
+    public static bool CanOccupy(TrainSection section, TrackStretch trackStretch, StretchDirection direction)
     {
         return trackStretch.HasAvailableTrack(direction);
     }
@@ -64,7 +64,7 @@ public class TrackStretchCapacityManager
         }
     }
 
-    private void ReleaseFromTrackStretch(TrainSection section, TrackStretch trackStretch)
+    private static void ReleaseFromTrackStretch(TrainSection section, TrackStretch trackStretch)
     {
         var toRemove = trackStretch.ActiveOccupancies
             .FirstOrDefault(o => o.Section.Id == section.Id);

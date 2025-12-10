@@ -3,7 +3,7 @@
     public static class UtilityExtensions
     {
 
-        private static int _nextId = 0;
+        private static int _nextId;
 
         extension(int id)
         {

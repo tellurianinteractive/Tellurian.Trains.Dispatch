@@ -5,7 +5,7 @@ namespace Tellurian.Trains.Dispatch.Tests;
 /// <summary>
 /// Simple time provider for testing that returns scheduled time or configured current time.
 /// </summary>
-internal class TestTimeProvider : ITimeProvider
+internal sealed class TestTimeProvider : ITimeProvider
 {
     public TimeSpan CurrentTime { get; set; } = TimeSpan.FromHours(10);
 

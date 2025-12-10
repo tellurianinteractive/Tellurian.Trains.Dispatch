@@ -1,6 +1,6 @@
 ﻿namespace Tellurian.Trains.Dispatch.Data.Access;
 
-internal class TrackStretchRecord
+internal sealed class TrackStretchRecord
 {
     public int Id { get; init; }
     public int StartOperationPlaceId { get; init; }

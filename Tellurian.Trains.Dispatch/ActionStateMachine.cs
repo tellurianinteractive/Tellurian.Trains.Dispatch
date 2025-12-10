@@ -8,7 +8,7 @@ namespace Tellurian.Trains.Dispatch;
 /// for a train section based on current state, dispatcher role, and business rules.
 /// This replaces the mixed state/action pattern in the old DispatchState-based approach.
 /// </summary>
-internal class ActionStateMachine : IActionProvider
+internal sealed class ActionStateMachine : IActionProvider
 {
     public IEnumerable<ActionContext> GetAvailableActions(TrainSection section, IDispatcher dispatcher)
     {

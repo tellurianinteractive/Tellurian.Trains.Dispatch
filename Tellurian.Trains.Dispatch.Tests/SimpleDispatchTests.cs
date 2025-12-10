@@ -9,7 +9,7 @@ public class SimpleDispatchTests
 {
     private Broker _broker = null!;
     private SimpleTestDataProvider _dataProvider = null!;
-    private InMemoryStateProvider _stateProvider = null!;
+    private InMemoryCompositeStateProvider _stateProvider = null!;
     private TestTimeProvider _timeProvider = null!;
     private static readonly string[] expected = ["A", "B", "C"];
 
@@ -17,7 +17,7 @@ public class SimpleDispatchTests
     public async Task Setup()
     {
         _dataProvider = new SimpleTestDataProvider();
-        _stateProvider = new InMemoryStateProvider();
+        _stateProvider = new InMemoryCompositeStateProvider();
         _timeProvider = new TestTimeProvider { CurrentTime = TimeSpan.FromHours(10) };
         _broker = new Broker(_dataProvider, _stateProvider, _timeProvider, NullLogger<Broker>.Instance);
         await _broker.InitAsync(isRestart: false);

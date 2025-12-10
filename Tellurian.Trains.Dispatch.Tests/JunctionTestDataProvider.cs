@@ -27,7 +27,7 @@ namespace Tellurian.Trains.Dispatch.Tests;
 /// Test focus: Train D-B-A can depart from D but cannot pass B until
 /// train A-B-C has passed B. Both trains have the same scheduled time at B.
 /// </remarks>
-internal class JunctionTestDataProvider : IBrokerDataProvider
+internal sealed class JunctionTestDataProvider : IBrokerDataProvider
 {
     // Stations
     private readonly Station _stationA;

@@ -17,7 +17,7 @@ namespace Tellurian.Trains.Dispatch.Tests;
 /// SignalControlledPlace B. The Pass action tests the intermediate signal passage.
 /// Travel times: A to B: 2 min, B to C: 3 min
 /// </remarks>
-internal class SignalControlledPlaceTestDataProvider : IBrokerDataProvider
+internal sealed class SignalControlledPlaceTestDataProvider : IBrokerDataProvider
 {
     // Stations
     private readonly Station _stationA;

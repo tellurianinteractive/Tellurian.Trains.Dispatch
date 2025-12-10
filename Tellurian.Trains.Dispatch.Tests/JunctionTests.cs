@@ -18,16 +18,18 @@ namespace Tellurian.Trains.Dispatch.Tests;
 [TestClass]
 public class JunctionTests
 {
+    private static readonly string[] ExpectedDispatcherSignatures = ["A", "C", "D"];
+
     private Broker _broker = null!;
     private JunctionTestDataProvider _dataProvider = null!;
-    private InMemoryStateProvider _stateProvider = null!;
+    private InMemoryCompositeStateProvider _stateProvider = null!;
     private TestTimeProvider _timeProvider = null!;
 
     [TestInitialize]
     public async Task Setup()
     {
         _dataProvider = new JunctionTestDataProvider();
-        _stateProvider = new InMemoryStateProvider();
+        _stateProvider = new InMemoryCompositeStateProvider();
         _timeProvider = new TestTimeProvider { CurrentTime = TimeSpan.FromHours(10) };
         _broker = new Broker(_dataProvider, _stateProvider, _timeProvider, NullLogger<Broker>.Instance);
         await _broker.InitAsync(isRestart: false);
@@ -50,7 +52,7 @@ public class JunctionTests
         var signatures = dispatchers.Select(d => d.Signature).OrderBy(s => s).ToList();
 
         CollectionAssert.AreEqual(
-            new[] { "A", "C", "D" },
+            ExpectedDispatcherSignatures,
             signatures,
             "Dispatcher signatures should be A, C, D");
     }

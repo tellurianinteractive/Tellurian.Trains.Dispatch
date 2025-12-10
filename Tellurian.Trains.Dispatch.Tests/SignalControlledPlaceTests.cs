@@ -9,7 +9,7 @@ public class SignalControlledPlaceTests
 {
     private Broker _broker = null!;
     private SignalControlledPlaceTestDataProvider _dataProvider = null!;
-    private InMemoryStateProvider _stateProvider = null!;
+    private InMemoryCompositeStateProvider _stateProvider = null!;
     private TestTimeProvider _timeProvider = null!;
     private static readonly string[] expected = ["A", "C"];
 
@@ -17,7 +17,7 @@ public class SignalControlledPlaceTests
     public async Task Setup()
     {
         _dataProvider = new SignalControlledPlaceTestDataProvider();
-        _stateProvider = new InMemoryStateProvider();
+        _stateProvider = new InMemoryCompositeStateProvider();
         _timeProvider = new TestTimeProvider { CurrentTime = TimeSpan.FromHours(10) };
         _broker = new Broker(_dataProvider, _stateProvider, _timeProvider, NullLogger<Broker>.Instance);
         await _broker.InitAsync(isRestart: false);

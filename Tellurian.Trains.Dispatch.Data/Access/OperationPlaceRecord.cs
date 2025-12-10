@@ -2,7 +2,7 @@
 
 namespace Tellurian.Trains.Dispatch.Data.Access;
 
-internal class OperationPlaceRecord
+internal sealed class OperationPlaceRecord
 {
     public int Id { get; init; }
     public required string Name { get; init; }
@@ -13,7 +13,7 @@ internal class OperationPlaceRecord
     public List<StationTrack> Tracks { get; init; } = [];
 }
 
-internal class StationTrackRecord
+internal sealed class StationTrackRecord
 {
     public int Id { get; init; }
     public int OperationPlaceId { get; init; }

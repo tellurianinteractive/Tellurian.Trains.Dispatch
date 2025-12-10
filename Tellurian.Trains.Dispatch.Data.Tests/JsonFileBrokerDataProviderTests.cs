@@ -112,7 +112,7 @@ public class JsonFileBrokerDataProviderTests
     public async Task CanInitializeBrokerWithJsonProvider()
     {
         var provider = new JsonFileBrokerDataProvider(LayoutFilePath, TrainFilePath);
-        var stateProvider = new InMemoryStateProvider();
+        var stateProvider = new InMemoryCompositeStateProvider();
         var timeProvider = new TestTimeProvider { CurrentTime = TimeSpan.FromHours(10) };
         var broker = new Broker(provider, stateProvider, timeProvider, NullLogger<Broker>.Instance);
 
@@ -126,7 +126,7 @@ public class JsonFileBrokerDataProviderTests
     public async Task BrokerWithJsonProviderHasDepartureActionsForTrains()
     {
         var provider = new JsonFileBrokerDataProvider(LayoutFilePath, TrainFilePath);
-        var stateProvider = new InMemoryStateProvider();
+        var stateProvider = new InMemoryCompositeStateProvider();
         var timeProvider = new TestTimeProvider { CurrentTime = TimeSpan.FromHours(10) };
         var broker = new Broker(provider, stateProvider, timeProvider, NullLogger<Broker>.Instance);
         await broker.InitAsync(isRestart: false, TestContext.CancellationToken);

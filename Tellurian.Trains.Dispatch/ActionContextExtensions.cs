@@ -1,3 +1,4 @@
+using Tellurian.Trains.Dispatch.Brokers;
 using Tellurian.Trains.Dispatch.Trains;
 using Tellurian.Trains.Dispatch.Utilities;
 
@@ -35,6 +36,115 @@ public static class ActionContextExtensions
 
                 _ => Option<ActionContext>.Fail($"Unknown action: {context.Action}")
             };
+        }
+
+        /// <summary>
+        /// Executes the action and records the state change to the provided state providers.
+        /// </summary>
+        /// <param name="stateProvider">The composite state provider to record changes to.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>An Option indicating success or failure with error message.</returns>
+        public async Task<Option<ActionContext>> ExecuteAndRecordAsync(
+            ICompositeStateProvider? stateProvider,
+            CancellationToken cancellationToken = default)
+        {
+            var result = context.Execute();
+
+            if (!result.HasValue || stateProvider is null)
+                return result;
+
+            // Record the state change based on action type
+            await context.RecordStateChangeAsync(stateProvider, cancellationToken).ConfigureAwait(false);
+
+            return result;
+        }
+
+        private async Task RecordStateChangeAsync(ICompositeStateProvider stateProvider, CancellationToken cancellationToken)
+        {
+            var train = context.Section.Departure.Train;
+            var section = context.Section;
+
+            switch (context.Action)
+            {
+                // Dispatch actions - record to DispatchStateProvider
+                case DispatchAction.Request:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Requested, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Accept:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Accepted, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Reject:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Rejected, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Revoke:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Revoked, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Depart:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Departed, trackStretchIndex: 0, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    // Also record implicit train state change to Running if it changed
+                    if (train.State == TrainState.Running && train.PreviousState == TrainState.Manned)
+                    {
+                        await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                            train.Id, TrainState.Running, cancellationToken).ConfigureAwait(false);
+                    }
+                    break;
+
+                case DispatchAction.Pass when context.PassTarget is not null:
+                    await stateProvider.DispatchStateProvider.RecordPassAsync(
+                        section.Id, context.PassTarget.Id, section.CurrentTrackStretchIndex, cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Arrive:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Arrived, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Clear:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Canceled, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    break;
+
+                // Train actions - record to TrainStateProvider
+                case DispatchAction.Manned:
+                    await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                        train.Id, TrainState.Manned, cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Running:
+                    await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                        train.Id, TrainState.Running, cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Canceled:
+                    await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                        train.Id, TrainState.Canceled, cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Aborted:
+                    await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                        train.Id, TrainState.Aborted, cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.Completed:
+                    await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                        train.Id, TrainState.Completed, cancellationToken).ConfigureAwait(false);
+                    break;
+
+                case DispatchAction.UndoTrainState:
+                    // Record the resulting state after undo
+                    await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                        train.Id, train.State, cancellationToken).ConfigureAwait(false);
+                    break;
+            }
         }
 
         private Option<ActionContext> ExecuteDispatchAction(DispatchState newState)

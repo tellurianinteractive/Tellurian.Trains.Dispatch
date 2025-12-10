@@ -2,7 +2,7 @@
 
 namespace Tellurian.Trains.Dispatch.Data.Access;
 
-internal class TrainStationCallRecord
+internal sealed class TrainStationCallRecord
 {
     public int Id { get; init; }
     public int TrainId { get; init; }

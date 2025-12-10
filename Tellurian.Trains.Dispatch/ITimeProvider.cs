@@ -5,10 +5,10 @@
 /// </summary>
 public interface ITimeProvider
 {
-    TimeSpan Time(TimeSpan? sheduledTime = null);
+    TimeSpan Time(TimeSpan? scheduledTime = null);
 }
 
-internal class DefaultTimeProvider : ITimeProvider
+internal sealed class DefaultTimeProvider : ITimeProvider
 {
     public static DefaultTimeProvider Instance { get; } = new();
 

@@ -1,23 +1,40 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Tellurian.Trains.Dispatch;
 using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 
 namespace Tellurian.Trains.Dispatch.Brokers;
 
-public class Broker(IBrokerDataProvider configuration, IBrokerStateProvider stateProvider, ITimeProvider timeProvider, ILogger<Broker> logger) : IBroker
+/// <summary>
+/// Central broker for train dispatch operations.
+/// </summary>
+/// <param name="configuration">Data provider for layout and train configuration.</param>
+/// <param name="compositeStateProvider">State provider for event-sourced state persistence.</param>
+/// <param name="timeProvider">Time provider for scheduling.</param>
+/// <param name="logger">Logger instance.</param>
+public class Broker(
+    IBrokerDataProvider configuration,
+    ICompositeStateProvider compositeStateProvider,
+    ITimeProvider timeProvider,
+    ILogger<Broker> logger) : IBroker
 {
     private readonly IBrokerDataProvider _configuration = configuration;
-    private readonly IBrokerStateProvider _stateProvider = stateProvider;
+    private readonly ICompositeStateProvider _compositeStateProvider = compositeStateProvider;
     private readonly ILogger<Broker> _logger = logger;
     private readonly ActionStateMachine _actionStateMachine = new();
 
     private Dictionary<int, DispatchStretch> _dispatchStretches = [];
     private Dictionary<int, TrainSection> _trainSections = [];
     private Dictionary<int, StationDispatcher> _dispatchers = [];
-    private Task<bool> Persist() => _stateProvider.SaveTrainsectionsAsync(_trainSections.Values);
 
     public ITimeProvider TimeProvider { get; } = timeProvider;
+
+    /// <summary>
+    /// Gets the composite state provider for recording state changes.
+    /// </summary>
+    public ICompositeStateProvider StateProvider => _compositeStateProvider;
+
+    public IEnumerable<TrainSection> TrainSections => _trainSections.Values;
 
     public IEnumerable<ActionContext> GetArrivalActionsFor(IDispatcher dispatcher, int maxItems) =>
         _trainSections.Values
@@ -48,18 +65,33 @@ public class Broker(IBrokerDataProvider configuration, IBrokerStateProvider stat
         var ds = await _configuration.GetDispatchStretchesAsync(cancellationToken).ConfigureAwait(false);
         _dispatchStretches = ds.ToDictionary(ds => ds.Id);
 
-        if (isRestart)
+        // Always load initial configuration from data provider
+        var trains = await _configuration.GetTrainsAsync(cancellationToken).ConfigureAwait(false);
+        var calls = await _configuration.GetTrainStationCallsAsync(cancellationToken).ConfigureAwait(false);
+        var trainSections = calls.ToTrainSections(_dispatchStretches.Values, TimeProvider, _logger);
+        _trainSections = WithUpdatedPrevious(trainSections).ToDictionary(d => d.Id);
+
+        // On restart, apply saved state from composite state provider
+        if (isRestart && _compositeStateProvider.HasAnySavedState)
         {
-            var trainSections = await _stateProvider.ReadTrainSections(cancellationToken).ConfigureAwait(false);
-            _trainSections = WithUpdatedPrevious(trainSections).ToDictionary(d => d.Id);
-        }
-        else
-        {
-            var trains = await _configuration.GetTrainsAsync(cancellationToken).ConfigureAwait(false);
-            var calls = await _configuration.GetTrainStationCallsAsync(cancellationToken).ConfigureAwait(false);
-            var trainSections = calls.ToTrainSections(_dispatchStretches.Values, TimeProvider, _logger);
-            _trainSections = WithUpdatedPrevious(trainSections).ToDictionary(d => d.Id);
-            var result = await Persist();
+            // Build dictionaries for trains and calls once
+            var trainsById = _trainSections.Values
+                .Select(s => s.Departure.Train)
+                .DistinctBy(t => t.Id)
+                .ToDictionary(t => t.Id);
+            var callsById = _trainSections.Values
+                .SelectMany(s => new[] { s.Departure, s.Arrival })
+                .DistinctBy(c => c.Id)
+                .ToDictionary(c => c.Id);
+
+            await _compositeStateProvider.ApplyAllStateAsync(
+                _trainSections,
+                trainsById,
+                callsById,
+                operationPlaces,
+                trackStretches,
+                cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Restored state from composite state provider");
         }
 
         static void ResolveSignalControlledPlaceControlledBy(Dictionary<int, StationDispatcher> _dispatchers, Dictionary<int, OperationPlace> operationPlaces)

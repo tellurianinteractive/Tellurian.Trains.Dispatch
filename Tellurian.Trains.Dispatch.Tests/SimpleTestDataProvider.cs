@@ -17,7 +17,7 @@ namespace Tellurian.Trains.Dispatch.Tests;
 /// - A to B: 10m = 2 minutes
 /// - B to C: 15m = 3 minutes
 /// </remarks>
-internal class SimpleTestDataProvider : IBrokerDataProvider
+internal sealed class SimpleTestDataProvider : IBrokerDataProvider
 {
     // Stations - Id = 0 triggers auto-increment
     private readonly Station _stationA;

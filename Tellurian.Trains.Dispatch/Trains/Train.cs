@@ -11,7 +11,7 @@ namespace Tellurian.Trains.Dispatch.Trains
         /// <summary>
         /// The previous state of the train, used for undo operations.
         /// </summary>
-        public TrainState? PreviousState { get; private set; } = null;
+        public TrainState? PreviousState { get; private set; }
 
         /// <summary>
         /// Maximum train length in meters.
@@ -28,7 +28,7 @@ namespace Tellurian.Trains.Dispatch.Trains
             PreviousState = null;
             isRevoke = false;
         }
-        private bool isRevoke = false;
+        private bool isRevoke;
     }
 
     public static class TrainExtensions

@@ -2,7 +2,7 @@
 
 namespace Tellurian.Trains.Dispatch.Data.Access;
 
-internal class TrainRecord
+internal sealed class TrainRecord
 {
     public int Id { get; init; }
     public required Company Company { get; init; }

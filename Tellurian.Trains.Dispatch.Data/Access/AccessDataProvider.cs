@@ -15,7 +15,7 @@ namespace Tellurian.Trains.Dispatch.Data.Access;
 /// <remarks>
 /// This <see cref="IBrokerDataProvider"/> uses ODBC with raw SQL statements for retriving data.
 /// </remarks>
-public class MicrosoftAccessBrokerConfiguration(int layoutId, int sessionId, string pathToAccessDatabaseFile) : IBrokerDataProvider
+public class AccessDataProvider(int layoutId, int sessionId, string pathToAccessDatabaseFile) : IBrokerDataProvider
 {
     private readonly int _layoutId = layoutId;
     private readonly int _sessionId = sessionId;
