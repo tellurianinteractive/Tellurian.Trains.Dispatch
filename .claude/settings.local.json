@@ -10,7 +10,8 @@
       "WebFetch(domain:fremo-stw.sourceforge.net)",
       "WebFetch(domain:www.bmertins.de)",
       "WebFetch(domain:www.mw-modellbau.de)",
-      "Bash(xcopy:*)"
+      "Bash(xcopy:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

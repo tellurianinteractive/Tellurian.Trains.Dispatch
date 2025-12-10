@@ -616,6 +616,197 @@ public class SimpleDispatchTests
 
     #endregion
 
+    #region UndoTrainState Tests
+
+    [TestMethod]
+    public void PlannedTrainHasNoPreviousState()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+
+        var undoAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.UndoTrainState);
+        Assert.IsNull(undoAction, "Planned train should have no UndoTrainState action");
+    }
+
+    [TestMethod]
+    public void AfterMannedUndoTrainStateActionBecomesAvailable()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var undoAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.UndoTrainState);
+
+        Assert.IsNotNull(undoAction, "UndoTrainState action should be available after Manned");
+    }
+
+    [TestMethod]
+    public void ExecuteUndoTrainStateRevertsFromMannedToPlanned()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+        var result = undoAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "UndoTrainState action should succeed");
+        Assert.AreEqual(Trains.TrainState.Planned, undoAction.Section.Departure.Train.State);
+    }
+
+    [TestMethod]
+    public void RunningTrainHasNoUndoAction()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        SetTrainToRunning(dispatcherA);
+
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var undoAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.UndoTrainState);
+
+        Assert.IsNull(undoAction, "Running train should not have UndoTrainState action");
+    }
+
+    [TestMethod]
+    public void ExecuteUndoTrainStateRevertsFromCanceledToPlanned()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        // Cancel a planned train
+        var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Canceled);
+        canceledAction.Execute();
+
+        // Undo the cancellation
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+        var result = undoAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "UndoTrainState action should succeed");
+        Assert.AreEqual(Trains.TrainState.Planned, undoAction.Section.Departure.Train.State);
+    }
+
+    [TestMethod]
+    public void ExecuteUndoTrainStateRevertsFromAbortedToRunning()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
+        // Complete A -> B journey
+        RequestAndAccept(dispatcherA, dispatcherB);
+        _broker.GetDepartureActionsFor(dispatcherA, 10).First(a => a.Action == DispatchAction.Depart).Execute();
+        _broker.GetArrivalActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Arrive).Execute();
+
+        // Abort the train on the second section
+        var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Aborted);
+        abortedAction.Execute();
+
+        // Undo the abort
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+        var result = undoAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "UndoTrainState action should succeed");
+        Assert.AreEqual(Trains.TrainState.Running, undoAction.Section.Departure.Train.State);
+    }
+
+    [TestMethod]
+    public void AfterUndoTrainStateNoPreviousStateRemains()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        // Manned -> has PreviousState
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        // Undo -> clears PreviousState
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+        undoAction.Execute();
+
+        // UndoTrainState should no longer be available
+        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
+        var undoActionAfter = departureActions.FirstOrDefault(a => a.Action == DispatchAction.UndoTrainState);
+
+        Assert.IsNull(undoActionAfter, "UndoTrainState action should not be available after undo (no previous state)");
+    }
+
+    [TestMethod]
+    public void UndoTrainStateIsTrainAction()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+
+        Assert.IsTrue(undoAction.IsTrainAction, "UndoTrainState should be classified as a train action");
+    }
+
+    [TestMethod]
+    public void UndoMannedDisplayNameIsCorrect()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Manned);
+        mannedAction.Execute();
+
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+
+        Assert.AreEqual("Undo Manned", undoAction.DisplayName);
+    }
+
+    [TestMethod]
+    public void UndoCanceledDisplayNameIsCorrect()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+
+        var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Canceled);
+        canceledAction.Execute();
+
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+
+        Assert.AreEqual("Undo Canceled", undoAction.DisplayName);
+    }
+
+    [TestMethod]
+    public void UndoAbortedDisplayNameIsCorrect()
+    {
+        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
+        SetTrainToRunning(dispatcherA);
+
+        // Complete A -> B journey
+        RequestAndAccept(dispatcherA, dispatcherB);
+        _broker.GetDepartureActionsFor(dispatcherA, 10).First(a => a.Action == DispatchAction.Depart).Execute();
+        _broker.GetArrivalActionsFor(dispatcherB, 10).First(a => a.Action == DispatchAction.Arrive).Execute();
+
+        // Abort the train on the second section
+        var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.Aborted);
+        abortedAction.Execute();
+
+        var undoAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
+            .First(a => a.Action == DispatchAction.UndoTrainState);
+
+        Assert.AreEqual("Undo Aborted", undoAction.DisplayName);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private void SetTrainToRunning(IDispatcher departureDispatcher)

@@ -74,5 +74,11 @@ public enum DispatchAction
     /// <summary>
     /// Train has completed its entire journey.
     /// </summary>
-    Completed
+    Completed,
+
+    /// <summary>
+    /// Undo the last train state change, reverting to the previous state.
+    /// This allows dispatchers to correct mistakes (e.g., accidentally canceling or aborting a train).
+    /// </summary>
+    UndoTrainState
 }

@@ -6,8 +6,12 @@ namespace Tellurian.Trains.Dispatch.Trains
     {
         public int Id { get; set { field = value.OrNextId; } }
 
-        public TrainState State { get; set { if (!isRevoke) Previous = field; field = value; } }
-        private TrainState? Previous = null;
+        public TrainState State { get; set { if (!isRevoke) PreviousState = field; field = value; } }
+
+        /// <summary>
+        /// The previous state of the train, used for undo operations.
+        /// </summary>
+        public TrainState? PreviousState { get; private set; } = null;
 
         /// <summary>
         /// Maximum train length in meters.
@@ -18,10 +22,10 @@ namespace Tellurian.Trains.Dispatch.Trains
 
         public void RevokeLastStateChange()
         {
-            if (Previous is null) return;
+            if (PreviousState is null) return;
             isRevoke = true;
-            State = Previous.Value;
-            Previous = null;
+            State = PreviousState.Value;
+            PreviousState = null;
             isRevoke = false;
         }
         private bool isRevoke = false;

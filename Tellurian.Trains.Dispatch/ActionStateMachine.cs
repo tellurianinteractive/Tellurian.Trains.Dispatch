@@ -147,6 +147,7 @@ internal class ActionStateMachine : IActionProvider
     /// Gets train state actions.
     /// First section only: Manned (when Planned), Canceled (when Planned), Running (when Manned).
     /// Non-first sections: Aborted (when Running) only.
+    /// UndoTrainState is available when the train has a previous state to revert to.
     /// Note: Completed is NOT an action - it's automatically triggered when the last section arrives.
     /// </summary>
     private static IEnumerable<ActionContext> GetTrainActions(TrainSection section, IDispatcher dispatcher)
@@ -175,6 +176,13 @@ internal class ActionStateMachine : IActionProvider
             {
                 yield return new ActionContext(section, DispatchAction.Aborted, dispatcher);
             }
+        }
+
+        // UndoTrainState is available only for Manned, Canceled, and Aborted states
+        if (section.Train.State is TrainState.Manned or TrainState.Canceled or TrainState.Aborted
+            && section.Train.PreviousState is not null)
+        {
+            yield return new ActionContext(section, DispatchAction.UndoTrainState, dispatcher);
         }
     }
 

@@ -8,7 +8,6 @@ public enum TrainState
     Canceled,
     Aborted,
     Completed,
-    Undo,
 }
 
 public static class TrainStateExtensions

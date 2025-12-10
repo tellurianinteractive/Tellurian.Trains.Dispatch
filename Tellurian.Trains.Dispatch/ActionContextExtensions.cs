@@ -31,6 +31,7 @@ public static class ActionContextExtensions
                 DispatchAction.Canceled => context.ExecuteTrainAction(TrainState.Canceled),
                 DispatchAction.Aborted => context.ExecuteTrainAction(TrainState.Aborted),
                 DispatchAction.Completed => context.ExecuteTrainAction(TrainState.Completed),
+                DispatchAction.UndoTrainState => context.ExecuteUndoTrainState(),
 
                 _ => Option<ActionContext>.Fail($"Unknown action: {context.Action}")
             };
@@ -63,6 +64,16 @@ public static class ActionContextExtensions
         private Option<ActionContext> ExecuteTrainAction(TrainState newState)
         {
             context.Section.Departure.Train.State = newState;
+            return Option<ActionContext>.Success(context);
+        }
+
+        private Option<ActionContext> ExecuteUndoTrainState()
+        {
+            var train = context.Section.Departure.Train;
+            if (train.PreviousState is null)
+                return Option<ActionContext>.Fail("No previous state to revert to");
+
+            train.RevokeLastStateChange();
             return Option<ActionContext>.Success(context);
         }
     }

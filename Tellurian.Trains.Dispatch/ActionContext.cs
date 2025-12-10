@@ -23,6 +23,7 @@ public record ActionContext(
     public string DisplayName => Action switch
     {
         DispatchAction.Pass when PassTarget is not null => $"Pass {PassTarget.Name}",
+        DispatchAction.UndoTrainState => $"Undo {Section.Train.State}",
         _ => Action.ToString()
     };
 
@@ -47,7 +48,8 @@ public record ActionContext(
         DispatchAction.Running or
         DispatchAction.Canceled or
         DispatchAction.Aborted or
-        DispatchAction.Completed;
+        DispatchAction.Completed or
+        DispatchAction.UndoTrainState;
 
     /// <summary>
     /// Returns true if this action is for the departure side of the dispatch.
