@@ -23,11 +23,13 @@ The library handles the complex logic of train dispatching, letting you focus on
 - **SignalControlledPlace** – Block signals, passing loops, or junctions controlled by a dispatcher
 - **OtherPlace** – Simple halts or unsignalled junctions
 
-**TrackStretch** represents the physical track between two adjacent places, with one or more tracks (single-track, double-track, etc.).
+Each operation place has **StationTrack** entries representing available tracks/platforms, with properties for display order and platform length (indicating passenger interchange capability).
+
+**TrackStretch** represents the physical track between two adjacent places, with one or more tracks (single-track, double-track, etc.). Optional properties include length (for graphical display and running time calculations) and CSS class (for UI styling).
 
 ### Logical Dispatch Routes
 
-**DispatchStretch** defines the logical route between two stations. It may span multiple TrackStretches and include intermediate SignalControlledPlaces. Each DispatchStretch supports bidirectional operation through **DispatchStretchDirection**.
+**DispatchStretch** defines the logical route between two stations. It may span multiple TrackStretches and include intermediate SignalControlledPlaces. Each DispatchStretch supports bidirectional operation through **DispatchStretchDirection**. An optional CSS class property allows UI styling differentiation between routes.
 
 ### Trains and Calls
 
@@ -46,7 +48,10 @@ Canceled  Canceled  Aborted
 
 A train progresses from scheduled (Planned) through crew assignment (Manned) to active operation (Running), then either completes normally or is aborted. A train can be canceled before it starts running (from Planned or Manned state).
 
-**Note:** The Manned and Canceled actions are only available on the first TrainSection of a train's journey. On subsequent sections, only the Aborted action is available (when Running).
+**Note:**
+- The Manned and Canceled actions are only available on the first TrainSection of a train's journey
+- On subsequent sections, only the Aborted action is available (when Running)
+- **Running state is set implicitly** when a train departs - there is no explicit "Running" action
 
 #### Undo Train State
 

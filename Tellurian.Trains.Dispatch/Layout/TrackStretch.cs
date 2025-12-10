@@ -21,6 +21,18 @@ public class TrackStretch(OperationPlace start, OperationPlace end, IList<Track>
     public int Id { get; set { field = value.OrNextId; } }
 
     /// <summary>
+    /// Length of the track stretch in meters.
+    /// Can be used for graphical layout display and train running time calculations.
+    /// </summary>
+    public int? Length { get; init; }
+
+    /// <summary>
+    /// CSS class name for styling this track stretch in the UI.
+    /// Expected to handle both light and dark themes.
+    /// </summary>
+    public string? CssClass { get; init; }
+
+    /// <summary>
     /// Starting point of this track stretch.
     /// </summary>
     public OperationPlace Start { get; } = start;

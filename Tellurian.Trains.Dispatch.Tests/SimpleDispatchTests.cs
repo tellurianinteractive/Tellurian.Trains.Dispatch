@@ -120,7 +120,7 @@ public class SimpleDispatchTests
     }
 
     [TestMethod]
-    public void AfterMannedRunningActionBecomesAvailable()
+    public void AfterMannedRequestActionBecomesAvailable()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -128,28 +128,36 @@ public class SimpleDispatchTests
         mannedAction.Execute();
 
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
-        var runningAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Running);
+        var requestAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Request);
 
-        Assert.IsNotNull(runningAction, "Running action should be available after Manned");
+        Assert.IsNotNull(requestAction, "Request action should be available after Manned");
     }
 
     [TestMethod]
-    public void ExecuteRunningChangesTrainStateToRunning()
+    public void DepartImplicitlySetsTrainStateToRunning()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
 
-        // First set train to Manned
+        // Set train to Manned
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
 
-        // Then set to Running
-        var runningAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        var result = runningAction.Execute();
+        // Verify train is Manned before depart
+        Assert.AreEqual(Trains.TrainState.Manned, mannedAction.Section.Departure.Train.State);
 
-        Assert.IsTrue(result.HasValue, "Running action should succeed");
-        Assert.AreEqual(Trains.TrainState.Running, runningAction.Section.Departure.Train.State);
+        // Request and accept
+        RequestAndAccept(dispatcherA, dispatcherB);
+
+        // Depart - this should implicitly set Running
+        var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Depart);
+        var result = departAction.Execute();
+
+        Assert.IsTrue(result.HasValue, "Depart action should succeed");
+        Assert.AreEqual(Trains.TrainState.Running, departAction.Section.Departure.Train.State,
+            "Depart should implicitly set train state to Running");
     }
 
     [TestMethod]
@@ -172,7 +180,7 @@ public class SimpleDispatchTests
         // Aborted is only available on non-first sections
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         // Complete A -> B journey
         RequestAndAccept(dispatcherA, dispatcherB);
@@ -192,23 +200,12 @@ public class SimpleDispatchTests
 
     #region Dispatch State Transition Tests
 
-    [TestMethod]
-    public void AfterRunningRequestActionBecomesAvailable()
-    {
-        var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
-        SetTrainToRunning(dispatcherA);
-
-        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
-        var requestAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Request);
-
-        Assert.IsNotNull(requestAction, "Request action should be available after train is Running");
-    }
 
     [TestMethod]
     public void ExecuteRequestChangesStateToRequested()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
@@ -223,7 +220,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
@@ -241,7 +238,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
@@ -260,7 +257,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
@@ -274,7 +271,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -290,7 +287,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -308,7 +305,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -334,27 +331,22 @@ public class SimpleDispatchTests
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
 
-        // 2. Set train to Running
-        var runningAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        runningAction.Execute();
-
-        // 3. Request departure from A
+        // 2. Request departure from A
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
         requestAction.Execute();
 
-        // 4. Accept at B
+        // 3. Accept at B
         var acceptAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
             .First(a => a.Action == DispatchAction.Accept);
         acceptAction.Execute();
 
-        // 5. Depart from A
+        // 4. Depart from A (implicitly sets train to Running)
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Depart);
         departAction.Execute();
 
-        // 6. Arrive at B
+        // 5. Arrive at B
         var arriveAction = _broker.GetArrivalActionsFor(dispatcherB, 10)
             .First(a => a.Action == DispatchAction.Arrive);
         var result = arriveAction.Execute();
@@ -371,7 +363,7 @@ public class SimpleDispatchTests
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
         // Complete full journey A -> B -> C
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         // A -> B
         RequestAndAccept(dispatcherA, dispatcherB);
@@ -398,7 +390,7 @@ public class SimpleDispatchTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         // Complete A -> B
         RequestAndAccept(dispatcherA, dispatcherB);
@@ -434,7 +426,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
@@ -451,7 +443,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
@@ -470,7 +462,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         // Request
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -497,7 +489,7 @@ public class SimpleDispatchTests
     public void AfterRequestRevokeActionBecomesAvailableAtDepartureStation()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
@@ -513,7 +505,7 @@ public class SimpleDispatchTests
     public void ExecuteRevokeFromRequestedChangesStateToRevoked()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
@@ -531,7 +523,7 @@ public class SimpleDispatchTests
     public void AfterRevokeFromRequestedRequestActionBecomesAvailableAgain()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         // Request
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -555,7 +547,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
@@ -569,7 +561,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         var arrivalActions = _broker.GetArrivalActionsFor(dispatcherB, 10).ToList();
@@ -583,7 +575,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         var revokeAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -599,7 +591,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherB);
 
         // Revoke
@@ -662,10 +654,24 @@ public class SimpleDispatchTests
     public void RunningTrainHasNoUndoAction()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
-        SetTrainToRunning(dispatcherA);
+        var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
 
-        var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
-        var undoAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.UndoTrainState);
+        // Set to Manned, then go through dispatch to reach Running state
+        SetTrainToManned(dispatcherA);
+        RequestAndAccept(dispatcherA, dispatcherB);
+        var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10).First(a => a.Action == DispatchAction.Depart);
+        departAction.Execute();
+
+        // Verify train is now Running
+        var train = departAction.Section.Departure.Train;
+        Assert.AreEqual(Trains.TrainState.Running, train.State, "Train should be Running after Depart");
+
+        // UndoTrainState should NOT be available for Running state - check all dispatchers
+        var allActions = _broker.GetDispatchers()
+            .SelectMany(d => _broker.GetDepartureActionsFor(d, 10).Concat(_broker.GetArrivalActionsFor(d, 10)))
+            .Where(a => a.Section.Departure.Train == train)
+            .ToList();
+        var undoAction = allActions.FirstOrDefault(a => a.Action == DispatchAction.UndoTrainState);
 
         Assert.IsNull(undoAction, "Running train should not have UndoTrainState action");
     }
@@ -735,7 +741,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         // Complete A -> B journey
         RequestAndAccept(dispatcherA, dispatcherB);
@@ -828,7 +834,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherB = _broker.GetDispatchers().First(d => d.Signature == "B");
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
 
         // Complete A -> B journey
         RequestAndAccept(dispatcherA, dispatcherB);
@@ -850,15 +856,11 @@ public class SimpleDispatchTests
 
     #region Helper Methods
 
-    private void SetTrainToRunning(IDispatcher departureDispatcher)
+    private void SetTrainToManned(IDispatcher departureDispatcher)
     {
         var mannedAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
-
-        var runningAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        runningAction.Execute();
     }
 
     private void RequestAndAccept(IDispatcher departureDispatcher, IDispatcher arrivalDispatcher)

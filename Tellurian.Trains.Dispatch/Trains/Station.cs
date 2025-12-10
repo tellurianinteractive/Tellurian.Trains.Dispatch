@@ -21,6 +21,13 @@ public record Station(string Name, string Signature)
     public override bool IsControlled => true;
 
     /// <summary>
+    /// The preferred language for the dispatcher at this station.
+    /// Uses culture codes: en-GB, de, nb, sv, da.
+    /// If null, falls back to the application's default language (en-GB).
+    /// </summary>
+    public string? PreferredLanguage { get; init; }
+
+    /// <summary>
     /// Override to prevent circular reference with StationDispatcher in hash code calculation.
     /// Uses base implementation which hashes by Id only.
     /// </summary>

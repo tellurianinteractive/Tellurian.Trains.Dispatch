@@ -107,10 +107,6 @@ public class JsonFileBrokerStateProviderTests
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
 
-        var runningAction = broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        runningAction.Execute();
-
         var requestAction = broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
         requestAction.Execute();
@@ -138,18 +134,30 @@ public class JsonFileBrokerStateProviderTests
         var stateProvider = new JsonFileBrokerStateProvider(_stateFilePath);
 
         var dispatcherA = broker.GetDispatchers().First(d => d.Signature == "A");
+        var dispatcherC = broker.GetDispatchers().First(d => d.Signature == "C");
 
-        // Progress the train to Running state
+        // Progress the train to Running state via Depart (A -> C)
         var mannedAction = broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
 
-        var runningAction = broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        runningAction.Execute();
+        var requestAction = broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Request);
+        requestAction.Execute();
 
-        var section = runningAction.Section;
+        var acceptAction = broker.GetArrivalActionsFor(dispatcherC, 10)
+            .First(a => a.Action == DispatchAction.Accept);
+        acceptAction.Execute();
+
+        var departAction = broker.GetDepartureActionsFor(dispatcherA, 10)
+            .First(a => a.Action == DispatchAction.Depart);
+        departAction.Execute();
+
+        var section = departAction.Section;
         var train = section.Departure.Train;
+
+        // Verify train is Running after Depart
+        Assert.AreEqual(TrainState.Running, train.State, "Train should be Running after Depart");
 
         // Save state
         await stateProvider.SaveTrainsectionsAsync([section]);

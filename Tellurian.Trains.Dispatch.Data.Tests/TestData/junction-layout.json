@@ -7,8 +7,8 @@
       "type": "Station",
       "isManned": true,
       "tracks": [
-        { "number": "1" },
-        { "number": "2" }
+        { "number": "1", "isMainTrack": true, "displayOrder": 1, "platformLength": 150 },
+        { "number": "2", "isMainTrack": false, "displayOrder": 2, "platformLength": 100 }
       ]
     },
     {
@@ -27,9 +27,9 @@
       "type": "Station",
       "isManned": true,
       "tracks": [
-        { "number": "10" },
-        { "number": "1" },
-        { "number": "2" }
+        { "number": "10", "isMainTrack": false, "displayOrder": 3 },
+        { "number": "1", "isMainTrack": true, "displayOrder": 1, "platformLength": 200 },
+        { "number": "2", "isMainTrack": false, "displayOrder": 2, "platformLength": 120 }
       ]
     },
     {
@@ -39,11 +39,11 @@
       "type": "Station",
       "isManned": true,
       "tracks": [
-        { "number": "1" },
-        { "number": "2" },
-        { "number": "3" },
-        { "number": "4" },
-        { "number": "5" }
+        { "number": "1", "isMainTrack": true, "displayOrder": 1, "platformLength": 180 },
+        { "number": "2", "isMainTrack": true, "displayOrder": 2, "platformLength": 180 },
+        { "number": "3", "isMainTrack": false, "displayOrder": 3 },
+        { "number": "4", "isMainTrack": false, "displayOrder": 4 },
+        { "number": "5", "isMainTrack": false, "displayOrder": 5 }
       ]
     }
   ],
@@ -52,31 +52,38 @@
       "id": 1,
       "startId": 1,
       "endId": 2,
-      "numberOfTracks": 1
+      "numberOfTracks": 1,
+      "length": 500,
+      "cssClass": "track-main"
     },
     {
       "id": 2,
       "startId": 2,
       "endId": 3,
-      "numberOfTracks": 1
+      "numberOfTracks": 1,
+      "length": 800
     },
     {
       "id": 3,
       "startId": 2,
       "endId": 4,
-      "numberOfTracks": 1
+      "numberOfTracks": 1,
+      "length": 600,
+      "cssClass": "track-branch"
     }
   ],
   "dispatchStretches": [
     {
       "id": 1,
       "fromStationId": 1,
-      "toStationId": 3
+      "toStationId": 3,
+      "cssClass": "dispatch-main-line"
     },
     {
       "id": 2,
       "fromStationId": 4,
-      "toStationId": 1
+      "toStationId": 1,
+      "cssClass": "dispatch-branch-line"
     }
   ]
 }

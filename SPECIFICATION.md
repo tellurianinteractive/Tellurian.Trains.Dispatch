@@ -12,9 +12,11 @@ This document provides a comprehensive analysis and specification for implementi
 6. [SSE Event Specification](#sse-event-specification)
 7. [External System Integration](#external-system-integration)
 8. [Blazor Client Implementation](#blazor-client-implementation)
-9. [Project Structure](#project-structure)
-10. [Deployment Scenario](#deployment-scenario)
-11. [Implementation Phases](#implementation-phases)
+9. [Localization](#localization)
+10. [Project Structure](#project-structure)
+11. [Deployment Scenario](#deployment-scenario)
+12. [Implementation Phases](#implementation-phases)
+13. [Future Features](#future-features)
 
 ---
 
@@ -152,10 +154,25 @@ The domain model separates physical infrastructure from logical dispatch routes.
 | **SignalControlledPlace** | Block signal, passing loop, or junction | Yes |
 | **OtherPlace** | Simple halt or unsignalled junction | No |
 
+**StationTrack** represents a specific track/platform at an operation place:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Number` | `string` | Track designation (e.g., "1", "2a", "5"). |
+| `IsMainTrack` | `bool` | True if this is a main (through) track, false for side tracks. |
+| `DisplayOrder` | `int` | Sort order for the web API. Defaults to track number when numeric. |
+| `PlatformLength` | `int?` | Platform length in meters. A value > 0 indicates passenger interchange capability. |
+| `MaxLength` | `int?` | Maximum train length in meters that the track can accommodate. |
+
 **TrackStretch** represents physical track between two adjacent OperationPlaces:
 - Contains one or more `Track` objects (single-track, double-track)
 - Manages `ActiveOccupancies` for capacity control
 - Tracks have direction constraints (`TrackOperationDirection`)
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Length` | `int?` | Length in meters. Used for graphical layout display and train running time calculations. |
+| `CssClass` | `string?` | CSS class for UI styling. Expected to handle both light and dark themes. |
 
 ### Logical Dispatch Routes
 
@@ -163,6 +180,10 @@ The domain model separates physical infrastructure from logical dispatch routes.
 - Spans one or more TrackStretches
 - Supports bidirectional operation via `Forward` and `Reverse` directions
 - May include intermediate SignalControlledPlaces
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `CssClass` | `string?` | CSS class for UI styling. Used to distinguish different dispatch stretches visually. Expected to handle both light and dark themes. |
 
 ### Trains and Sections
 
@@ -196,7 +217,11 @@ Planned → Manned → Running → Completed
 Canceled  Canceled  Aborted
 ```
 
-**Note:** Train state actions (Manned, Canceled) are only available on the first TrainSection. On subsequent sections, only Aborted is available. Manned, Canceled, and Aborted states can be undone to revert to the previous state (see Undo Train State section below).
+**Note:**
+- Train state actions (Manned, Canceled) are only available on the first TrainSection
+- On subsequent sections, only Aborted is available
+- **Running state is set implicitly** when a train departs (via the Depart action) - there is no explicit "Running" action
+- Manned, Canceled, and Aborted states can be undone to revert to the previous state (see Undo Train State section below)
 
 **DispatchState** - Dispatch authorization:
 ```
@@ -233,9 +258,10 @@ The `ActionStateMachine` determines available actions based on:
 |--------|--------------|----------------|
 | Manned | Any dispatcher | First section only; TrainState is Planned |
 | Canceled | Any dispatcher | First section only; TrainState is Planned or Manned |
-| Running | Any dispatcher | First section only; TrainState is Manned |
 | Aborted | Any dispatcher | Non-first sections only; TrainState is Running |
 | UndoTrainState | Any dispatcher | TrainState is Manned, Canceled, or Aborted |
+
+**Note:** There is no explicit "Running" action - the Running state is set automatically when a train departs (Depart action).
 
 #### Undo Train State
 
@@ -310,7 +336,7 @@ Returns dispatcher with arrivals and departures, each including:
     "state": "None",
     "actions": [
       { "name": "request", "displayName": "Request", "href": "..." },
-      { "name": "running", "displayName": "Running", "href": "..." },
+      { "name": "canceled", "displayName": "Canceled", "href": "..." },
       { "name": "undoTrainState", "displayName": "Undo Manned", "href": "..." }
     ]
   }]
@@ -481,6 +507,109 @@ This works because the Broker is the single source of truth. The client is just 
 
 ---
 
+## Localization
+
+The user interface must be built for localization from the start. This ensures a consistent user experience for dispatchers across different countries and languages.
+
+### Language Support
+
+| Language | Culture Code | Status |
+|----------|--------------|--------|
+| British English | en | Neutral/Fallback |
+| German | de | Supported |
+| Norwegian | nb | Supported |
+| Swedish | sv | Supported |
+| Danish | da | Supported |
+
+**British English (en-GB)** is the assembly neutral language and serves as the fallback when a translation is not available.
+
+### Architecture
+
+#### Separate Resources Project
+
+All translated resources must be placed in a separate project within the GUI solution:
+
+```
+Tellurian.Trains.Dispatch.Client/           # Blazor WebAssembly
+Tellurian.Trains.Dispatch.Client.Resources/ # Localization resources
+    ├── Resources/
+    │   ├── Strings.resx              # Neutral (en-GB)
+    │   ├── Strings.de.resx           # German
+    │   ├── Strings.nb.resx           # Norwegian
+    │   ├── Strings.sv.resx           # Swedish
+    │   └── Strings.da.resx           # Danish
+    └── Tellurian.Trains.Dispatch.Client.Resources.csproj
+```
+
+**Why a separate project?**
+- Clear separation of concerns
+- Resources can be updated independently
+- Easier for translators to work with
+- Supports future addition of languages without modifying the main client
+
+#### Translation Library
+
+Use the **Tellurian.Languages** NuGet package to retrieve translations:
+
+```xml
+<PackageReference Include="Tellurian.Languages" Version="*" />
+```
+
+This library provides:
+- Consistent translation management from different resource types (e.g. RESX, MD and more)
+- Integration with .NET localization infrastructure
+
+### Implementation Guidelines
+
+1. **Never hardcode user-visible strings** - All text shown to users must come from resource files
+2. **Use meaningful resource keys** - Keys should describe the content, e.g., `Button_Accept`, `Label_TrainNumber`
+3. **Include context comments** - Add comments to help translators understand where and how the text is used
+4. **Handle formatting** - Use placeholders for dynamic values: `"Train {0} departed from {1}"`
+5. **Consider text length** - German text is often longer than English; design UI to accommodate
+
+### Language Selection
+
+Language is selected **per dispatcher** based on the station's configuration:
+
+#### Station Property
+
+The `Station` class has a `PreferredLanguage` property:
+
+```csharp
+public string? PreferredLanguage { get; init; }
+```
+
+Valid values: `en`, `de`, `nb`, `sv`, `da`, or `null` (fallback to en if other language is specified).
+
+#### Selection Logic
+
+1. When a dispatcher logs in or selects a station, the UI uses the station's `PreferredLanguage`
+2. If `PreferredLanguage` is null or not supported, fall back to en-GB
+3. The language setting is included in the dispatcher API response
+4. The Blazor client applies the language when rendering the dispatcher's view
+
+#### API Response
+
+The dispatcher endpoint includes the language:
+
+```json
+{
+  "id": 1,
+  "signature": "A",
+  "stationName": "Stockholm Central",
+  "preferredLanguage": "sv",
+  ...
+}
+```
+
+#### Why Per-Station Language?
+
+- Different dispatchers may work at stations in different countries
+- At international layouts, stations near borders may use different languages
+- Simplifies configuration - language is part of the layout data, not user preferences
+
+---
+
 ## Project Structure
 
 ```
@@ -504,6 +633,14 @@ Tellurian.Trains.Dispatch.sln
 │   ├── Pages/
 │   ├── Components/
 │   └── Services/
+│
+├── Tellurian.Trains.Dispatch.Client.Resources/  # Localization resources
+│   └── Resources/
+│       ├── Strings.resx                    # Neutral (en-GB)
+│       ├── Strings.de.resx                 # German
+│       ├── Strings.nb.resx                 # Norwegian
+│       ├── Strings.sv.resx                 # Swedish
+│       └── Strings.da.resx                 # Danish
 │
 ├── Tellurian.Trains.Dispatch.Shared/       # DTOs
 │   ├── DispatcherDto.cs
@@ -602,3 +739,14 @@ Even without authentication, validate all inputs using FluentValidation:
 3. **Blazor WASM** - Same API for humans and machines
 4. **Refresh pattern** - Re-fetch on events, not local state sync
 5. **No authentication** - Trust the network for model railway use
+
+## Future Features
+The first release focuses on core dispatch functionality. 
+Future enhancements may include:
+- Adding trains dynamically via API.
+- User interface for creating new trains to add.
+- Graphical layout view of the railway with train positions.
+- Separate process to listen to physical block detectors and update train positions automatically, 
+  for example via LocoNet, MQTT, **ZN** or similar protocols.
+- Enhanced logging of actions, warnings, and errors for diagnostics.
+- Additional translations as users require.

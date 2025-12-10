@@ -55,7 +55,7 @@ public class SignalControlledPlaceTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -76,7 +76,7 @@ public class SignalControlledPlaceTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -96,7 +96,7 @@ public class SignalControlledPlaceTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -116,7 +116,7 @@ public class SignalControlledPlaceTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -139,7 +139,7 @@ public class SignalControlledPlaceTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -159,7 +159,7 @@ public class SignalControlledPlaceTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -183,7 +183,7 @@ public class SignalControlledPlaceTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -216,22 +216,17 @@ public class SignalControlledPlaceTests
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
 
-        // 2. Set train to Running
-        var runningAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        runningAction.Execute();
-
-        // 3. Request departure from A to C
+        // 2. Request departure from A to C
         var requestAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Request);
         requestAction.Execute();
 
-        // 4. Accept at C
+        // 3. Accept at C
         var acceptAction = _broker.GetArrivalActionsFor(dispatcherC, 10)
             .First(a => a.Action == DispatchAction.Accept);
         acceptAction.Execute();
 
-        // 5. Depart from A
+        // 4. Depart from A (implicitly sets train to Running)
         var departAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Depart);
         departAction.Execute();
@@ -240,7 +235,7 @@ public class SignalControlledPlaceTests
         Assert.AreEqual(0, departAction.Section.CurrentTrackStretchIndex);
         Assert.IsFalse(departAction.Section.IsOnLastTrackStretch);
 
-        // 6. Pass Signal B (controlled by A)
+        // 5. Pass Signal B (controlled by A)
         var passAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
             .First(a => a.Action == DispatchAction.Pass);
         passAction.Execute();
@@ -249,7 +244,7 @@ public class SignalControlledPlaceTests
         Assert.AreEqual(1, passAction.Section.CurrentTrackStretchIndex);
         Assert.IsTrue(passAction.Section.IsOnLastTrackStretch);
 
-        // 7. Arrive at C
+        // 6. Arrive at C
         var arriveAction = _broker.GetArrivalActionsFor(dispatcherC, 10)
             .First(a => a.Action == DispatchAction.Arrive);
         var result = arriveAction.Execute();
@@ -262,15 +257,11 @@ public class SignalControlledPlaceTests
 
     #region Helper Methods
 
-    private void SetTrainToRunning(IDispatcher departureDispatcher)
+    private void SetTrainToManned(IDispatcher departureDispatcher)
     {
         var mannedAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
-
-        var runningAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        runningAction.Execute();
     }
 
     private void RequestAndAccept(IDispatcher departureDispatcher, IDispatcher arrivalDispatcher)

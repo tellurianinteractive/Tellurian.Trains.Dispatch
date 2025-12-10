@@ -20,6 +20,11 @@ internal class StationTrackRecord
     public required string TrackNumber { get; init; }
     public bool IsMainTrack { get; init; }
     public int DisplayOrder { get; init; }
-    public int PlatformLength { get; init; }
+
+    /// <summary>
+    /// Length of the platform in meters.
+    /// A value greater than 0 indicates that passengers can board/alight at this track.
+    /// </summary>
+    public int? PlatformLength { get; init; }
 }
 

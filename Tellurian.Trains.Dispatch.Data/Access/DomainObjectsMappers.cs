@@ -70,7 +70,12 @@ internal static class DomainObjectsMappers
             {
                 tracks.Add(new((i + 1).ToString(), TrackOperationDirection.DoubleDirected));
             }
-            return new(from, to, tracks) { Id = record.Id };
+            return new(from, to, tracks)
+            {
+                Id = record.Id,
+                Length = record.Length,
+                CssClass = record.CssClass
+            };
         }
     }
 
@@ -80,7 +85,11 @@ internal static class DomainObjectsMappers
         {
             if (operationPlaces[record.FromStationId] is not Station from || operationPlaces[record.ToStationId] is not Station to)
                 throw new ArgumentException("Station from and/or to is missing", nameof(operationPlaces));
-            return new DispatchStretch(from, to, allTrackStretches) { Id = record.Id };
+            return new DispatchStretch(from, to, allTrackStretches)
+            {
+                Id = record.Id,
+                CssClass = record.CssClass
+            };
         }
     }
 }

@@ -74,7 +74,11 @@ public class JsonFileBrokerDataProvider : IBrokerDataProvider
             if (_operationPlaces!.TryGetValue(ds.FromStationId, out var from) && from is Station fromStation &&
                 _operationPlaces.TryGetValue(ds.ToStationId, out var to) && to is Station toStation)
             {
-                dispatchStretches.Add(new DispatchStretch(fromStation, toStation, _trackStretches!.Values) { Id = ds.Id });
+                dispatchStretches.Add(new DispatchStretch(fromStation, toStation, _trackStretches!.Values)
+                {
+                    Id = ds.Id,
+                    CssClass = ds.CssClass
+                });
             }
             else
             {
@@ -175,7 +179,12 @@ public class JsonFileBrokerDataProvider : IBrokerDataProvider
                 tracks.Add(new Track((i + 1).ToString(), TrackOperationDirection.DoubleDirected));
             }
 
-            var stretch = new TrackStretch(start, end, tracks) { Id = ts.Id };
+            var stretch = new TrackStretch(start, end, tracks)
+            {
+                Id = ts.Id,
+                Length = ts.Length,
+                CssClass = ts.CssClass
+            };
             _trackStretches[stretch.Id] = stretch;
         }
     }

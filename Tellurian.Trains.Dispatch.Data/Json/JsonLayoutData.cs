@@ -62,7 +62,29 @@ public class JsonStationTrack
     /// </summary>
     public int? MaxLength { get; set; }
 
-    public StationTrack ToDomain() => new(Number) { MaxLength = MaxLength };
+    /// <summary>
+    /// Indicates whether this is a main track (through track) or a side track.
+    /// </summary>
+    public bool IsMainTrack { get; set; }
+
+    /// <summary>
+    /// Display order for sorting tracks. Defaults to track number when not specified.
+    /// </summary>
+    public int? DisplayOrder { get; set; }
+
+    /// <summary>
+    /// Length of the platform in meters.
+    /// A value greater than 0 indicates that passengers can board/alight at this track.
+    /// </summary>
+    public int? PlatformLength { get; set; }
+
+    public StationTrack ToDomain() => new(Number)
+    {
+        MaxLength = MaxLength,
+        IsMainTrack = IsMainTrack,
+        DisplayOrder = DisplayOrder ?? (int.TryParse(Number, out var num) ? num : 0),
+        PlatformLength = PlatformLength
+    };
 }
 
 /// <summary>
@@ -86,6 +108,18 @@ public class JsonTrackStretch
     /// Number of physical tracks (1 = single track, 2 = double track).
     /// </summary>
     public int NumberOfTracks { get; set; } = 1;
+
+    /// <summary>
+    /// Length of the track stretch in meters.
+    /// Can be used for graphical layout display and train running time calculations.
+    /// </summary>
+    public int? Length { get; set; }
+
+    /// <summary>
+    /// CSS class name for styling this track stretch in the UI.
+    /// Expected to handle both light and dark themes.
+    /// </summary>
+    public string? CssClass { get; set; }
 }
 
 /// <summary>
@@ -104,4 +138,10 @@ public class JsonDispatchStretch
     /// ID of the to station.
     /// </summary>
     public int ToStationId { get; set; }
+
+    /// <summary>
+    /// CSS class name for styling this dispatch stretch in the UI.
+    /// Expected to handle both light and dark themes.
+    /// </summary>
+    public string? CssClass { get; set; }
 }

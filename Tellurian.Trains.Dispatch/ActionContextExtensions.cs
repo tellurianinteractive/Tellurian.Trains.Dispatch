@@ -47,6 +47,14 @@ public static class ActionContextExtensions
         {
             context.Section.State = DispatchState.Departed;
             context.Section.CurrentTrackStretchIndex = 0;
+
+            // Implicitly set train to Running when departing from Manned state
+            var train = context.Section.Departure.Train;
+            if (train.State == TrainState.Manned)
+            {
+                train.State = TrainState.Running;
+            }
+
             return Option<ActionContext>.Success(context);
         }
 

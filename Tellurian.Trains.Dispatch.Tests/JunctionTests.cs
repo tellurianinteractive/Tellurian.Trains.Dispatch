@@ -80,26 +80,26 @@ public class JunctionTests
     #region Both Trains Can Start Tests
 
     [TestMethod]
-    public void BothTrainsCanBecomeRunning()
+    public void BothTrainsCanBecomeMannedAndDispatchable()
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherD = _broker.GetDispatchers().First(d => d.Signature == "D");
 
-        // Set Train 201 to Running
-        SetTrainToRunning(dispatcherA);
+        // Set Train 201 to Manned
+        SetTrainToManned(dispatcherA);
 
-        // Set Train 202 to Running
-        SetTrainToRunning(dispatcherD);
+        // Set Train 202 to Manned
+        SetTrainToManned(dispatcherD);
 
-        // Verify both trains are running
+        // Verify both trains can request dispatch (are dispatchable)
         var actionsA = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
         var actionsD = _broker.GetDepartureActionsFor(dispatcherD, 10).ToList();
 
         var requestA = actionsA.FirstOrDefault(a => a.Action == DispatchAction.Request);
         var requestD = actionsD.FirstOrDefault(a => a.Action == DispatchAction.Request);
 
-        Assert.IsNotNull(requestA, "Train 201 should have Request action available after Running");
-        Assert.IsNotNull(requestD, "Train 202 should have Request action available after Running");
+        Assert.IsNotNull(requestA, "Train 201 should have Request action available after Manned");
+        Assert.IsNotNull(requestD, "Train 202 should have Request action available after Manned");
     }
 
     [TestMethod]
@@ -110,8 +110,8 @@ public class JunctionTests
         var dispatcherD = _broker.GetDispatchers().First(d => d.Signature == "D");
 
         // Set both trains to Running
-        SetTrainToRunning(dispatcherA);
-        SetTrainToRunning(dispatcherD);
+        SetTrainToManned(dispatcherA);
+        SetTrainToManned(dispatcherD);
 
         // Train 201: Request and Accept A->C
         RequestAndAccept(dispatcherA, dispatcherC);
@@ -143,7 +143,7 @@ public class JunctionTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -163,7 +163,7 @@ public class JunctionTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -183,7 +183,7 @@ public class JunctionTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var dispatcherC = _broker.GetDispatchers().First(d => d.Signature == "C");
 
-        SetTrainToRunning(dispatcherA);
+        SetTrainToManned(dispatcherA);
         RequestAndAccept(dispatcherA, dispatcherC);
 
         _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -210,8 +210,8 @@ public class JunctionTests
         var dispatcherD = _broker.GetDispatchers().First(d => d.Signature == "D");
 
         // Set both trains to Running
-        SetTrainToRunning(dispatcherA);
-        SetTrainToRunning(dispatcherD);
+        SetTrainToManned(dispatcherA);
+        SetTrainToManned(dispatcherD);
 
         // Train 201: Depart from A (now on stretch A->B)
         RequestAndAccept(dispatcherA, dispatcherC);
@@ -237,8 +237,8 @@ public class JunctionTests
         var dispatcherD = _broker.GetDispatchers().First(d => d.Signature == "D");
 
         // Set both trains to Running
-        SetTrainToRunning(dispatcherA);
-        SetTrainToRunning(dispatcherD);
+        SetTrainToManned(dispatcherA);
+        SetTrainToManned(dispatcherD);
 
         // === Train 201: A -> B -> C ===
         RequestAndAccept(dispatcherA, dispatcherC);
@@ -298,15 +298,11 @@ public class JunctionTests
 
     #region Helper Methods
 
-    private void SetTrainToRunning(IDispatcher departureDispatcher)
+    private void SetTrainToManned(IDispatcher departureDispatcher)
     {
         var mannedAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
             .First(a => a.Action == DispatchAction.Manned);
         mannedAction.Execute();
-
-        var runningAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
-            .First(a => a.Action == DispatchAction.Running);
-        runningAction.Execute();
     }
 
     private void RequestAndAccept(IDispatcher departureDispatcher, IDispatcher arrivalDispatcher)

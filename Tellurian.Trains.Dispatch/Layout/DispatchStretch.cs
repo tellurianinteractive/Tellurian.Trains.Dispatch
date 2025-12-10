@@ -33,6 +33,12 @@ public class DispatchStretch
     public int Id { get; set { field = value.OrNextId; } }
 
     /// <summary>
+    /// CSS class name for styling this dispatch stretch in the UI.
+    /// Expected to handle both light and dark themes.
+    /// </summary>
+    public string? CssClass { get; init; }
+
+    /// <summary>
     /// Ordered sequence of TrackStretches that make up this DispatchStretch.
     /// Found using shortest path algorithm between origin and destination.
     /// </summary>
