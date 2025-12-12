@@ -3,6 +3,8 @@
 A modern .NET library for dispatching trains between stations on a model railway.
 
 > **Translations:** [Dansk](README.da.md) | [Deutsch](README.de.md) | [Norsk](README.nb.md) | [Svenska](README.sv.md)
+>
+> **For detailed technical information**, see the [Specification](SPECIFICATION.md).
 
 ## Why This Library?
 
