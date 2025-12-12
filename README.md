@@ -79,7 +79,7 @@ Each TrainSection tracks its dispatch progress independently, from initial reque
 
 A train's journey consists of multiple TrainSections linked via the `Previous` property:
 
-- **First section** (`Previous` is null): This is where train state actions (Manned, Canceled) are available. A train must be Manned before its first departure can be Requested.
+- **First section** has no previous section: This is where train state actions (Manned, Canceled) are available. A train must be Manned before its first departure can be Requested.
 - **Subsequent sections**: Dispatch actions are only available after the Previous section has departed. Only the Aborted action is available for train state changes.
 
 This ensures trains move through their journey in sequence - you cannot request departure from station B before the train has left station A.
@@ -90,12 +90,12 @@ Dispatchers interact through explicit actions. The **ActionStateMachine** determ
 
 | Action | Performed By | Description |
 |--------|--------------|-------------|
-| Request | Departure dispatcher | Request permission to dispatch |
+| Request | Departure dispatcher | Request permission to let a train depart |
 | Accept/Reject | Arrival dispatcher | Respond to dispatch request |
 | Revoke | Either dispatcher | Cancel an accepted request (before departure) |
 | Depart | Departure dispatcher | Train leaves the station |
 | Pass | Control point dispatcher | Confirm train passed a signal |
-| Arrive | Arrival dispatcher | Train reached destination |
+| Arrive | Arrival dispatcher | Train reached next station |
 
 Each dispatcher sees only the actions they are authorized to perform.
 
@@ -122,7 +122,8 @@ Supplies initial data in a specific order:
 5. TrainStationCalls (the timetable)
 
 ### IBrokerStateProvider
-Handles persistence of dispatch state for save/restore functionality.
+Handles persistence of dispatch state for save/restore functionality
+in case of application restart or crash.
 
 ### ITimeProvider
 Supplies current time, typically from a fast clock for accelerated operation.
