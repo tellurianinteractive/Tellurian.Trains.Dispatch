@@ -2,6 +2,8 @@
 
 A modern .NET library for dispatching trains between stations on a model railway.
 
+> **Translations:** [Dansk](README.da.md) | [Deutsch](README.de.md) | [Norsk](README.nb.md) | [Svenska](README.sv.md)
+
 ## Why This Library?
 
 Running a realistic train operations session on a model railway requires coordination between multiple dispatchers. This library provides:

@@ -743,6 +743,7 @@ Even without authentication, validate all inputs using FluentValidation:
 ## Future Features
 The first release focuses on core dispatch functionality. 
 Future enhancements may include:
+- Reading track layout and timetables from XPLN files.
 - Adding trains dynamically via API.
 - User interface for creating new trains to add.
 - Graphical layout view of the railway with train positions.
