@@ -668,10 +668,10 @@ Even without authentication, validate all inputs using FluentValidation:
 The first release focuses on core dispatch functionality. 
 Future enhancements may include:
 - Reading track layout and timetables from XPLN files.
-- Adding trains dynamically via API.
-- User interface for creating new trains to add.
+This feature can utilise the existing [**Tellurian.Trains.Schedule.Importers.Xpln**]([link text](https://github.com/tellurianinteractive/Tellurian.Trains.Schedules.Importers)) library to parse XPLN files and populate the dispatch system with accurate layout and scheduling data.
+- Adding trains dynamically via API, incuding user interface for creating new trains to add.
 - Graphical layout view of the railway with train positions.
 - Separate process to listen to physical block detectors and update train positions automatically, 
   for example via LocoNet, MQTT, **ZN** or similar protocols.
 - Enhanced logging of actions, warnings, and errors for diagnostics.
-- Additional translations as users require.
+- Additional translations of user interface as users require.
