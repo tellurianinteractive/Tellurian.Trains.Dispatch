@@ -31,7 +31,7 @@ Jede Betriebsstelle hat **Bahnhofsgleise** (Station Track), die verfügbare Glei
 
 **Dispositionsstrecke** (Dispatch Stretch) definiert die logische Route zwischen zwei Bahnhöfen. Sie kann mehrere Streckenabschnitte umfassen und zwischenliegende signalgesteuerte Stellen einschließen. Jede Dispositionsstrecke unterstützt bidirektionalen Betrieb durch **Dispositionsstreckenrichtung** (Dispatch Stretch Direction). Eine optionale CSS-Klasseneigenschaft ermöglicht die UI-Styling-Differenzierung zwischen Routen.
 
-### Züge und Fahrplaneinträge
+### Züge
 
 - **Zug** (Train) – Identifiziert durch Eisenbahnverkehrsunternehmen und Zugnummer (z.B. "DB ICE 123")
 - **Zughaltestelle** (Train Station Call) – Eine geplante Ankunft oder Abfahrt an einem bestimmten Ort und Gleis

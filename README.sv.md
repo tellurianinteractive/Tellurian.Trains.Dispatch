@@ -31,7 +31,7 @@ Varje driftplats har ett eller flera **spår** (Station Track) som representerar
 
 **Tågledningssträcka** (Dispatch Stretch) definierar den logiska vägen mellan två stationer. Den kan sträcka sig över flera spårsträckor och inkludera mellanliggande signalkontrollerade platser. Varje tågledningssträcka stöder dubbelriktad drift genom **tågledningssträckriktning** (Dispatch Stretch Direction). En valfri CSS-klassegenskap möjliggör UI-styling för att särskilja olika vägar.
 
-### Tåg och anrop
+### Tåg
 
 - **Tåg** (Train) – Identifieras av trafikföretag och tågnummer (t.ex. "SJ IC 123")
 - **Tåguppehåll** (Train Station Call) – En planerad ankomst eller avgång vid en specifik plats och spår

@@ -31,7 +31,7 @@ Each operation place has **StationTrack** entries representing available tracks/
 
 **DispatchStretch** defines the logical route between two stations. It may span multiple TrackStretches and include intermediate SignalControlledPlaces. Each DispatchStretch supports bidirectional operation through **DispatchStretchDirection**. An optional CSS class property allows UI styling differentiation between routes.
 
-### Trains and Calls
+### Trains
 
 - **Train** – Identified by operating company and train number (e.g., "SJ IC 123")
 - **TrainStationCall** – A scheduled arrival or departure at a specific location and track
