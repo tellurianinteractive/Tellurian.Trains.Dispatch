@@ -5,18 +5,17 @@ This document provides a comprehensive analysis and specification for implementi
 ## Table of Contents
 
 1. [Requirements Summary](#requirements-summary)
-2. [Architecture Analysis](#architecture-analysis)
-3. [Recommended Architecture](#recommended-architecture)
-4. [Domain Model Overview](#domain-model-overview)
-5. [API Specification](#api-specification)
-6. [SSE Event Specification](#sse-event-specification)
-7. [External System Integration](#external-system-integration)
-8. [Blazor Client Implementation](#blazor-client-implementation)
-9. [Localization](#localization)
-10. [Project Structure](#project-structure)
-11. [Deployment Scenario](#deployment-scenario)
-12. [Implementation Phases](#implementation-phases)
-13. [Future Features](#future-features)
+2. [Architecture](#architecture)
+3. [Domain Model Overview](#domain-model-overview)
+4. [API Specification](#api-specification)
+5. [SSE Event Specification](#sse-event-specification)
+6. [External System Integration](#external-system-integration)
+7. [Blazor Client Implementation](#blazor-client-implementation)
+8. [Localization](#localization)
+9. [Project Structure](#project-structure)
+10. [Deployment Scenario](#deployment-scenario)
+11. [Implementation Phases](#implementation-phases)
+12. [Future Features](#future-features)
 
 ---
 
@@ -39,65 +38,7 @@ This document provides a comprehensive analysis and specification for implementi
 
 ---
 
-## Architecture Analysis
-
-### Option A: Blazor Interactive Server (No Web API)
-
-```
-┌──────────────────┐     SignalR      ┌─────────────────────┐
-│  Blazor Server   │◄────────────────►│    ASP.NET Core     │
-│   (Browser UI)   │                  │   + Broker Service  │
-└──────────────────┘                  └─────────────────────┘
-```
-
-**Pros:** Simpler architecture, direct DI access to Broker, fast initial load.
-
-**Cons:** No API for external integrations (violates requirement #1), higher server resources per user, server restart loses all connections.
-
-### Option B: Blazor WebAssembly + Web API + SSE (Recommended)
-
-```
-┌──────────────────┐                  ┌─────────────────────┐
-│  Blazor WASM     │─────HTTP/SSE────►│   Minimal API       │
-│   (Browser UI)   │                  │   + SSE Endpoint    │
-└──────────────────┘                  │   + Broker Service  │
-                                      └─────────────────────┘
-┌──────────────────┐                           ▲
-│ External Systems │───────HTTP/SSE────────────┘
-│ (Signaling, etc) │
-└──────────────────┘
-```
-
-**Pros:** Single unified API, stateless server, lightweight SSE connections, clear separation of concerns.
-
-**Cons:** Larger initial download (~2-4MB WASM runtime), unidirectional SSE.
-
-### Option C: Blazor WebAssembly + Web API + SignalR
-
-**Pros:** Bidirectional real-time, rich features.
-
-**Cons:** More complexity than needed, WebSocket may be blocked by proxies.
-
-### Why We Chose Option B
-
-1. **Unified API** - The same endpoints serve both the Blazor app and external integrations. A signaling system and a human dispatcher use identical API calls.
-
-2. **SSE vs SignalR** - For our use case, dispatchers only need to *receive* updates (unidirectional). Actions are separate HTTP POSTs. SSE provides exactly this with less overhead than SignalR's bidirectional WebSocket connections.
-
-3. **Scalability** - WASM runs client-side, so the server only handles API requests. No persistent server-side state per user.
-
-4. **External Integration** - Physical signaling systems, display boards, and automation controllers need HTTP API access regardless. With Option B, there's one API to learn.
-
-### Why Minimal API over Controllers
-
-- **Less ceremony** - No controller classes, attributes, or conventions to learn
-- **Better performance** - Slightly lower overhead than MVC
-- **Modern pattern** - .NET 10's recommended approach for APIs
-- **Clarity** - Each endpoint is self-contained and easy to understand
-
----
-
-## Recommended Architecture
+## Architecture
 
 ### Overview
 
@@ -373,17 +314,7 @@ Optional filtering: `?dispatcherId=2`
 
 ## SSE Event Specification
 
-### Why SSE over SignalR?
-
-| Aspect | SSE | SignalR |
-|--------|-----|---------|
-| Direction | Server → Client | Bidirectional |
-| Protocol | Standard HTTP | WebSocket (with fallbacks) |
-| Complexity | Simple | More complex |
-| Proxy support | Excellent | May be blocked |
-| Our need | Receive updates | Only receive updates |
-
-Since dispatchers need to *receive* updates but *send* actions via separate HTTP calls, SSE's unidirectional nature is a perfect fit.
+Server-Sent Events (SSE) provides unidirectional real-time updates from server to client over standard HTTP. Dispatchers receive state updates via SSE and send actions via separate HTTP POST calls.
 
 ### Event Types
 
@@ -445,14 +376,7 @@ External systems connect via the same API as the Blazor client:
 
 ## Blazor Client Implementation
 
-### Why Blazor WebAssembly?
-
-| Aspect | Motivation |
-|--------|------------|
-| **Unified API** | Uses same endpoints as external systems |
-| **Client-side rendering** | Server resources independent of user count |
-| **Modern C#** | Share domain knowledge with server code |
-| **Progressive loading** | Initial WASM download cached by browser |
+Blazor WebAssembly runs client-side in the browser, using the same API endpoints as external systems. The initial WASM download is cached by the browser for subsequent visits.
 
 ### Design Principles
 
@@ -726,19 +650,19 @@ Even without authentication, validate all inputs using FluentValidation:
 
 ## Summary
 
-| Component | Technology | Why |
-|-----------|------------|-----|
-| Backend API | .NET 10 Minimal API | Modern, performant, less ceremony |
-| Real-time | Server-Sent Events | Simple, fits unidirectional need |
-| Client UI | Blazor WebAssembly | Unified API, client-side rendering |
-| API Design | HATEOAS | Server controls actions, clients follow links |
+| Component | Technology |
+|-----------|------------|
+| Backend API | .NET 10 Minimal API |
+| Real-time updates | Server-Sent Events (SSE) |
+| Client UI | Blazor WebAssembly |
+| API Design | HATEOAS |
 
-**Key Design Decisions:**
-1. **HATEOAS API** - State machine logic on server only
-2. **SSE over SignalR** - Simpler for unidirectional updates
-3. **Blazor WASM** - Same API for humans and machines
-4. **Refresh pattern** - Re-fetch on events, not local state sync
-5. **No authentication** - Trust the network for model railway use
+**Key Design Principles:**
+1. **HATEOAS API** - State machine logic on server only; clients follow links
+2. **SSE for updates** - Unidirectional server-to-client updates
+3. **Unified API** - Same endpoints for Blazor client and external systems
+4. **Refresh pattern** - Re-fetch on events rather than local state sync
+5. **Network trust** - No application-level authentication for model railway use
 
 ## Future Features
 The first release focuses on core dispatch functionality. 
