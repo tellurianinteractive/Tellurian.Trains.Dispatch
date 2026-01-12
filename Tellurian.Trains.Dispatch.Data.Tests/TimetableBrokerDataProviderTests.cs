@@ -29,7 +29,7 @@ public class TimetableBrokerDataProviderTests
 
         // Assert
         var placesList = places.ToList();
-        Assert.AreEqual(3, placesList.Count);
+        Assert.HasCount(3, placesList);
         Assert.AreEqual(2, placesList.OfType<DispatchStation>().Count());
         Assert.AreEqual(1, placesList.OfType<OtherPlace>().Count());
     }
@@ -46,7 +46,7 @@ public class TimetableBrokerDataProviderTests
 
         // Assert
         var stretchesList = stretches.ToList();
-        Assert.AreEqual(2, stretchesList.Count);
+        Assert.HasCount(2, stretchesList);
         Assert.IsTrue(stretchesList.All(s => s.Length > 0));
     }
 
@@ -64,7 +64,7 @@ public class TimetableBrokerDataProviderTests
         var stretchesList = dispatchStretches.ToList();
         // Should have one dispatch stretch between A and C (both manned)
         // traversing through B (unmanned)
-        Assert.AreEqual(1, stretchesList.Count);
+        Assert.HasCount(1, stretchesList);
     }
 
     [TestMethod]
@@ -79,7 +79,7 @@ public class TimetableBrokerDataProviderTests
 
         // Assert
         var trainsList = trains.ToList();
-        Assert.AreEqual(1, trainsList.Count);
+        Assert.HasCount(1, trainsList);
         Assert.AreEqual(101, trainsList[0].Identity.Number);
         Assert.AreEqual("Gt", trainsList[0].Identity.Prefix);
     }
@@ -96,7 +96,7 @@ public class TimetableBrokerDataProviderTests
 
         // Assert
         var callsList = calls.ToList();
-        Assert.AreEqual(3, callsList.Count);
+        Assert.HasCount(3, callsList);
         Assert.IsTrue(callsList.All(c => c.SequenceNumber >= 0));
         Assert.AreEqual(0, callsList[0].SequenceNumber);
         Assert.AreEqual(1, callsList[1].SequenceNumber);

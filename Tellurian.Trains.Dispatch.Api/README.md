@@ -236,6 +236,13 @@ Configure the API in `appsettings.json`:
     "Source": "Xpln",
     "Xpln": {
       "FilePath": "Data/schedule.ods"
+    },
+    "Json": {
+      "FilePath": "Data/schedule.json"
+    },
+    "Database": {
+      "ConnectionString": "Data Source=schedule.db",
+      "ScheduleName": "MySchedule"
     }
   }
 }
@@ -250,7 +257,38 @@ Configure the API in `appsettings.json`:
 ### Data Provider
 
 **Supported sources:**
-- `Xpln` - Load from XPLN spreadsheet files (.ods) via the `Tellurian.Trains.Schedules.Model` ecosystem
+- `Xpln` - Load from XPLN spreadsheet files (.ods)
+- `Json` - Load from JSON schedule files
+- `Database` - Load from SQLite database
+
+All data providers use the `Tellurian.Trains.Schedules.Model` ecosystem.
+
+#### XPLN Provider
+```json
+"DataProvider": {
+  "Source": "Xpln",
+  "Xpln": { "FilePath": "Data/schedule.ods" }
+}
+```
+
+#### JSON Provider
+```json
+"DataProvider": {
+  "Source": "Json",
+  "Json": { "FilePath": "Data/schedule.json" }
+}
+```
+
+#### Database Provider
+```json
+"DataProvider": {
+  "Source": "Database",
+  "Database": {
+    "ConnectionString": "Data Source=schedule.db",
+    "ScheduleName": "MySchedule"
+  }
+}
+```
 
 If no `Source` is configured, an empty provider is used (for testing).
 

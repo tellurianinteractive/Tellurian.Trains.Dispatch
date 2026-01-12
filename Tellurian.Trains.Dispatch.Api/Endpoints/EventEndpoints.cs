@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using System.Text.Json;
 using Tellurian.Trains.Dispatch.Api.Services;
 using Tellurian.Trains.Dispatch.Shared;
@@ -28,7 +29,7 @@ public static class EventEndpoints
         return app;
     }
 
-    private static IResult GetEvents(
+    private static ServerSentEventsResult<string> GetEvents(
         int? dispatcherId,
         DispatchEventService eventService,
         CancellationToken cancellationToken)

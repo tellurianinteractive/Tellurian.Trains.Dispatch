@@ -18,7 +18,8 @@
       "Bash(Remove-Item -Recurse -Force \"C:\\\\Utveckling\\\\Github\\\\Tellurian.Trains\\\\Tellurian.Trains.Dispatch\\\\Tellurian.Trains.Dispatch.Data\\\\Json\")",
       "Bash(Remove-Item -Force \"C:\\\\Utveckling\\\\Github\\\\Tellurian.Trains\\\\Tellurian.Trains.Dispatch\\\\Tellurian.Trains.Dispatch.Data.Tests\\\\JsonFileBrokerDataProviderTests.cs\")",
       "WebFetch(domain:github.com)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet add:*)"
     ],
     "deny": [],
     "ask": []
