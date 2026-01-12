@@ -9,6 +9,6 @@ public class TestTimeProvider : ITimeProvider
 {
     public TimeSpan CurrentTime { get; set; } = TimeSpan.FromHours(10);
 
-    public TimeSpan Time(TimeSpan? scheduledTime = null) =>
-        scheduledTime ?? CurrentTime;
+    public Task<TimeStatus> GetTimeStatusAsync(TimeSpan? scheduledTime = null) =>
+        Task.FromResult(new TimeStatus(scheduledTime ?? CurrentTime, IsRealTime: false, IsRunning: true));
 }

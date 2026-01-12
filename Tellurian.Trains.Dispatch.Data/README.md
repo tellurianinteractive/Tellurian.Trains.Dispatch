@@ -24,9 +24,10 @@ The `IBrokerDataProvider` loads the **initial configuration** that defines the r
 - **Train Station Calls** - Scheduled stops with arrival/departure times
 
 This data is typically **read-only** and comes from:
+- XPLN spreadsheet files (.ods, .xlsx)
 - JSON configuration files
-- A database with timetable data
-- An external scheduling system
+- A relational database
+- Microsoft Access planning database
 
 The configuration defines *what should happen* according to the timetable.
 
@@ -56,6 +57,79 @@ On restart, the broker:
 2. Applies saved state changes from the state provider
 
 This separation allows the same timetable to be used across multiple sessions while preserving operational state.
+
+## Included Implementations
+
+### Data Provider
+
+**`TimetableBrokerDataProvider`** - Converts data from `Tellurian.Trains.Schedules.Model.Timetable` to Dispatch domain types.
+
+This provider supports lazy loading via a loader function, enabling deferred data loading until actually needed:
+
+```csharp
+// Lazy loading - timetable is loaded when broker first requests data
+var provider = new TimetableBrokerDataProvider(async () =>
+{
+    // Load from any source that produces a Timetable
+    return await LoadTimetableFromSomeSourceAsync();
+});
+
+// Or with a pre-loaded timetable
+var timetable = await LoadTimetableAsync();
+var provider = new TimetableBrokerDataProvider(timetable);
+```
+
+The `Tellurian.Trains.Schedules.Model` ecosystem supports loading timetables from:
+- **XPLN spreadsheets** (.ods) via `Tellurian.Trains.Schedules.Importers.Xpln`
+- **JSON files** via JSON via `Tellurian.Trains.Schedules.Model.Data`
+- **Relational databases** via `Tellurian.Trains.Schedules.Model.Data`
+
+### State Providers
+
+- **`CsvCompositeStateProvider`** - CSV-based event sourcing (file per provider)
+- **`InMemoryCompositeStateProvider`** - In-memory storage for testing
+
+### Time Provider
+
+- **`TellurianFastClockTimeProvider`** - Fetches time from the Tellurian Fastclock service
+
+## Usage
+
+```csharp
+// Create data provider with lazy loading
+var dataProvider = new TimetableBrokerDataProvider(async () =>
+{
+    // Example: Load from XPLN file
+    var importer = new XplnDataImporter(fileInfo, ...);
+    var result = await importer.ImportScheduleAsync(name);
+    return result.Item.Timetable;
+});
+
+// Create state provider
+var stateProvider = new CsvCompositeStateProvider("./state");
+
+// Create and initialize broker
+var broker = new Broker(dataProvider, stateProvider, timeProvider, logger);
+await broker.InitAsync(isRestart: false);
+
+// On restart, pass isRestart: true to restore saved state
+await broker.InitAsync(isRestart: true);
+```
+
+## Recording State Changes
+
+Use `ExecuteAndRecordAsync` to execute actions and record state changes:
+
+```csharp
+var action = departureActions.First(a => a.Action == DispatchAction.AssignDriver);
+await action.ExecuteAndRecordAsync(broker.StateProvider);
+```
+
+Or record manually:
+```csharp
+train.State = TrainState.Manned;
+await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(train.Id, train.State);
+```
 
 ## Implementing a Custom State Provider
 
@@ -259,46 +333,4 @@ public class DatabaseStateProvider : ITrainStateProvider
 
     public bool HasSavedState => _context.TrainStateChanges.Any();
 }
-```
-
-## Included Implementations
-
-This package includes:
-
-### Data Providers
-- `JsonFileBrokerDataProvider` - Loads configuration from JSON files
-- `AccessDataProvider` - Loads configuration from a Microsoft Access database (.accdb) using ODBC
-
-### State Providers
-- `CsvCompositeStateProvider` - CSV-based event sourcing (file per provider)
-- `InMemoryCompositeStateProvider` - In-memory storage for testing
-
-## Usage
-
-```csharp
-// Create providers
-var dataProvider = new JsonFileBrokerDataProvider("layout.json", "trains.json");
-var stateProvider = new CsvCompositeStateProvider("./state");
-
-// Create and initialize broker
-var broker = new Broker(dataProvider, stateProvider, timeProvider, logger);
-await broker.InitAsync(isRestart: false);
-
-// On restart, pass isRestart: true to restore saved state
-await broker.InitAsync(isRestart: true);
-```
-
-## Recording State Changes
-
-Use `ExecuteAndRecordAsync` to execute actions and record state changes:
-
-```csharp
-var action = departureActions.First(a => a.Action == DispatchAction.Manned);
-await action.ExecuteAndRecordAsync(broker.StateProvider);
-```
-
-Or record manually:
-```csharp
-train.State = TrainState.Manned;
-await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(train.Id, train.State);
 ```

@@ -80,7 +80,7 @@ public class SimpleDispatchTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
 
-        var mannedAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Manned);
+        var mannedAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.AssignDriver);
         Assert.IsNotNull(mannedAction, "Should have Manned action for planned train");
     }
 
@@ -90,7 +90,7 @@ public class SimpleDispatchTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
 
-        var canceledAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Canceled);
+        var canceledAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Cancel);
         Assert.IsNotNull(canceledAction, "Should have Canceled action for planned train");
     }
 
@@ -111,7 +111,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
 
         var result = mannedAction.Execute();
 
@@ -124,7 +124,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
@@ -141,7 +141,7 @@ public class SimpleDispatchTests
 
         // Set train to Manned
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         // Verify train is Manned before depart
@@ -167,7 +167,7 @@ public class SimpleDispatchTests
 
         // Cancel a planned train before it starts
         var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Canceled);
+            .First(a => a.Action == DispatchAction.Cancel);
         var result = canceledAction.Execute();
 
         Assert.IsTrue(result.HasValue, "Canceled action should succeed");
@@ -189,7 +189,7 @@ public class SimpleDispatchTests
 
         // Now Aborted should be available on the second section (B->C)
         var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
-            .First(a => a.Action == DispatchAction.Aborted);
+            .First(a => a.Action == DispatchAction.Abort);
         var result = abortedAction.Execute();
 
         Assert.IsTrue(result.HasValue, "Aborted action should succeed");
@@ -328,7 +328,7 @@ public class SimpleDispatchTests
 
         // 1. Set train to Manned
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         // 2. Request departure from A
@@ -405,7 +405,7 @@ public class SimpleDispatchTests
 
         // Abort the train (available on non-first sections when Running)
         var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
-            .First(a => a.Action == DispatchAction.Aborted);
+            .First(a => a.Action == DispatchAction.Abort);
         abortedAction.Execute();
 
         // Now Clear should be available on the B->C section (Departed + Aborted)
@@ -625,7 +625,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
@@ -639,7 +639,7 @@ public class SimpleDispatchTests
     {
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -683,7 +683,7 @@ public class SimpleDispatchTests
 
         // Cancel a planned train
         var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Canceled);
+            .First(a => a.Action == DispatchAction.Cancel);
         canceledAction.Execute();
 
         // Undo the cancellation
@@ -702,12 +702,12 @@ public class SimpleDispatchTests
 
         // Set train to Manned
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         // Canceled should be available from Manned state
         var departureActions = _broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
-        var canceledAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Canceled);
+        var canceledAction = departureActions.FirstOrDefault(a => a.Action == DispatchAction.Cancel);
 
         Assert.IsNotNull(canceledAction, "Canceled action should be available from Manned state");
     }
@@ -719,12 +719,12 @@ public class SimpleDispatchTests
 
         // Set train to Manned first
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         // Cancel the manned train
         var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Canceled);
+            .First(a => a.Action == DispatchAction.Cancel);
         canceledAction.Execute();
 
         // Undo the cancellation - should revert to Manned
@@ -750,7 +750,7 @@ public class SimpleDispatchTests
 
         // Abort the train on the second section
         var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
-            .First(a => a.Action == DispatchAction.Aborted);
+            .First(a => a.Action == DispatchAction.Abort);
         abortedAction.Execute();
 
         // Undo the abort
@@ -769,7 +769,7 @@ public class SimpleDispatchTests
 
         // Manned -> has PreviousState
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         // Undo -> clears PreviousState
@@ -790,7 +790,7 @@ public class SimpleDispatchTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
 
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -805,7 +805,7 @@ public class SimpleDispatchTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
 
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -820,7 +820,7 @@ public class SimpleDispatchTests
         var dispatcherA = _broker.GetDispatchers().First(d => d.Signature == "A");
 
         var canceledAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Canceled);
+            .First(a => a.Action == DispatchAction.Cancel);
         canceledAction.Execute();
 
         var undoAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
@@ -843,7 +843,7 @@ public class SimpleDispatchTests
 
         // Abort the train on the second section
         var abortedAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
-            .First(a => a.Action == DispatchAction.Aborted);
+            .First(a => a.Action == DispatchAction.Abort);
         abortedAction.Execute();
 
         var undoAction = _broker.GetDepartureActionsFor(dispatcherB, 10)
@@ -859,7 +859,7 @@ public class SimpleDispatchTests
     private void SetTrainToManned(IDispatcher departureDispatcher)
     {
         var mannedAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
     }
 

@@ -161,12 +161,12 @@ internal sealed class ActionStateMachine : IActionProvider
             switch (trainState)
             {
                 case TrainState.Planned:
-                    yield return new ActionContext(section, DispatchAction.Manned, dispatcher);
-                    yield return new ActionContext(section, DispatchAction.Canceled, dispatcher);
+                    yield return new ActionContext(section, DispatchAction.AssignDriver, dispatcher);
+                    yield return new ActionContext(section, DispatchAction.Cancel, dispatcher);
                     break;
 
                 case TrainState.Manned:
-                    yield return new ActionContext(section, DispatchAction.Canceled, dispatcher);
+                    yield return new ActionContext(section, DispatchAction.Cancel, dispatcher);
                     break;
             }
         }
@@ -175,7 +175,7 @@ internal sealed class ActionStateMachine : IActionProvider
             // Non-first sections: Only Aborted is available when running
             if (trainState == TrainState.Running)
             {
-                yield return new ActionContext(section, DispatchAction.Aborted, dispatcher);
+                yield return new ActionContext(section, DispatchAction.Abort, dispatcher);
             }
         }
 

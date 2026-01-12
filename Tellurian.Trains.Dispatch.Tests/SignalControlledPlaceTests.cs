@@ -213,7 +213,7 @@ public class SignalControlledPlaceTests
 
         // 1. Set train to Manned
         var mannedAction = _broker.GetDepartureActionsFor(dispatcherA, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
 
         // 2. Request departure from A to C
@@ -260,7 +260,7 @@ public class SignalControlledPlaceTests
     private void SetTrainToManned(IDispatcher departureDispatcher)
     {
         var mannedAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
     }
 

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<AssemblyName>Tellurian.Trains.Dispatch.Api</AssemblyName>
+		<RootNamespace>Tellurian.Trains.Dispatch.Api</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Tellurian.Trains.Dispatch\Tellurian.Trains.Dispatch.csproj" />
+		<ProjectReference Include="..\Tellurian.Trains.Dispatch.Data\Tellurian.Trains.Dispatch.Data.csproj" />
+		<ProjectReference Include="..\Tellurian.Trains.Dispatch.Shared\Tellurian.Trains.Dispatch.Shared.csproj" />
+	</ItemGroup>
+
+</Project>

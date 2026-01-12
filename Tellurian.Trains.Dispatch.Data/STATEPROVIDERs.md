@@ -1,15 +1,14 @@
-# State Providers - New Approach
-
-This document outlines a new approach to implementing
+# State Providers 
+This document outlines implementing
 state providers in the Tellurian Trains Dispatch system.
 The goal is to enhance modularity, maintainability, and
 scalability of state management within the application.
-The new approach also makes it easier to add new state providers
+This  approach also makes it easier to add new state providers
 and keep track of historical state data.
 
 ## Key Concepts
 
-The main concepts of the new approach are:
+The main concepts are:
 - Write each small state change to the state provider as it happens.
 - Each state change is timestamped.
 - Each state change is logged for historical tracking.
@@ -37,8 +36,8 @@ Each state provider will implement a separate interface derived from a common
 - Writing state changes.
 - Reloading state from data using the current configuration of the broker.
 
-Interfaces should be placed in the `Tellurian.Trains.Dispatch` project's `Brokers`
-folder. Implementations should be placed in the `Tellurian.Trains.Dispatch.Data` project.
+Interfaces are placed in the `Tellurian.Trains.Dispatch` project's `Brokers`
+folder. Implementations are placed in the `Tellurian.Trains.Dispatch.Data` project.
 
 Methods for writing and reading should be asynchronous to ensure non-blocking operations.
 
@@ -48,10 +47,10 @@ Each state provider will have its own CSV file to log changes.
 References to objects (e.g., trains, sections, calls) will be done using Id properties to ensure consistency.
 
 Because each state provider can write different types of state changes,
-the type of state change must be included in the CSV records, in order to differentiate
+the type of state change is included in the CSV records, in order to differentiate
 between them when reading the records back.
 
-Reading and writing CSV records should be handled using extension methods.
+Reading and writing CSV records ars handled using extension methods.
 
 ### CSV Library
 

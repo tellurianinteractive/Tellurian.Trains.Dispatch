@@ -27,11 +27,11 @@ public static class ActionContextExtensions
                 DispatchAction.Clear => context.ExecuteDispatchAction(DispatchState.Canceled),
 
                 // Train actions - change Train.State
-                DispatchAction.Manned => context.ExecuteTrainAction(TrainState.Manned),
-                DispatchAction.Running => context.ExecuteTrainAction(TrainState.Running),
-                DispatchAction.Canceled => context.ExecuteTrainAction(TrainState.Canceled),
-                DispatchAction.Aborted => context.ExecuteTrainAction(TrainState.Aborted),
-                DispatchAction.Completed => context.ExecuteTrainAction(TrainState.Completed),
+                DispatchAction.AssignDriver => context.ExecuteTrainAction(TrainState.Manned),
+                DispatchAction.Start => context.ExecuteTrainAction(TrainState.Running),
+                DispatchAction.Cancel => context.ExecuteTrainAction(TrainState.Canceled),
+                DispatchAction.Abort => context.ExecuteTrainAction(TrainState.Aborted),
+                DispatchAction.Complete => context.ExecuteTrainAction(TrainState.Completed),
                 DispatchAction.UndoTrainState => context.ExecuteUndoTrainState(),
 
                 _ => Option<ActionContext>.Fail($"Unknown action: {context.Action}")
@@ -114,27 +114,27 @@ public static class ActionContextExtensions
                     break;
 
                 // Train actions - record to TrainStateProvider
-                case DispatchAction.Manned:
+                case DispatchAction.AssignDriver:
                     await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
                         train.Id, TrainState.Manned, cancellationToken).ConfigureAwait(false);
                     break;
 
-                case DispatchAction.Running:
+                case DispatchAction.Start:
                     await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
                         train.Id, TrainState.Running, cancellationToken).ConfigureAwait(false);
                     break;
 
-                case DispatchAction.Canceled:
+                case DispatchAction.Cancel:
                     await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
                         train.Id, TrainState.Canceled, cancellationToken).ConfigureAwait(false);
                     break;
 
-                case DispatchAction.Aborted:
+                case DispatchAction.Abort:
                     await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
                         train.Id, TrainState.Aborted, cancellationToken).ConfigureAwait(false);
                     break;
 
-                case DispatchAction.Completed:
+                case DispatchAction.Complete:
                     await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
                         train.Id, TrainState.Completed, cancellationToken).ConfigureAwait(false);
                     break;

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<AssemblyName>Tellurian.Trains.Dispatch.Shared</AssemblyName>
+		<RootNamespace>Tellurian.Trains.Dispatch.Shared</RootNamespace>
+	</PropertyGroup>
+
+</Project>

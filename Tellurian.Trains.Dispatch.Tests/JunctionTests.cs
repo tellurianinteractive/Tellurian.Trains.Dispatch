@@ -303,7 +303,7 @@ public class JunctionTests
     private void SetTrainToManned(IDispatcher departureDispatcher)
     {
         var mannedAction = _broker.GetDepartureActionsFor(departureDispatcher, 10)
-            .First(a => a.Action == DispatchAction.Manned);
+            .First(a => a.Action == DispatchAction.AssignDriver);
         mannedAction.Execute();
     }
 

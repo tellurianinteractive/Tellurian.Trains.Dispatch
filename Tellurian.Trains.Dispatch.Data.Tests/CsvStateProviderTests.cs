@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Tellurian.Trains.Dispatch;
 using Tellurian.Trains.Dispatch.Brokers;
 using Tellurian.Trains.Dispatch.Data.Csv;
-using Tellurian.Trains.Dispatch.Data.Json;
 using Tellurian.Trains.Dispatch.Trains;
 
 namespace Tellurian.Trains.Dispatch.Data.Tests;
@@ -13,10 +12,6 @@ namespace Tellurian.Trains.Dispatch.Data.Tests;
 [TestClass]
 public class CsvStateProviderTests
 {
-    private static string TestDataPath => Path.Combine(AppContext.BaseDirectory, "TestData");
-    private static string LayoutFilePath => Path.Combine(TestDataPath, "junction-layout.json");
-    private static string TrainFilePath => Path.Combine(TestDataPath, "junction-trains.json");
-
     private string _testDirectory = null!;
     private TestTimeProvider _timeProvider = null!;
 
@@ -254,7 +249,7 @@ public class CsvStateProviderTests
         var departureActions = broker.GetDepartureActionsFor(dispatcherA, 10).ToList();
 
         // Act: Execute Manned action with recording
-        var mannedAction = departureActions.First(a => a.Action == DispatchAction.Manned);
+        var mannedAction = departureActions.First(a => a.Action == DispatchAction.AssignDriver);
         await mannedAction.ExecuteAndRecordAsync(stateProvider);
 
         stateProvider.Dispose();
@@ -273,7 +268,7 @@ public class CsvStateProviderTests
 
     private async Task<Broker> CreateBrokerWithStateProviderAsync(ICompositeStateProvider stateProvider, bool isRestart = false)
     {
-        var dataProvider = new JsonFileBrokerDataProvider(LayoutFilePath, TrainFilePath);
+        var dataProvider = new CsvTestDataProvider();
         var broker = new Broker(dataProvider, stateProvider, _timeProvider, NullLogger<Broker>.Instance);
         await broker.InitAsync(isRestart);
         return broker;

@@ -1,27 +1,28 @@
 # About this project
-This project should contain data providers impementing 
-**IBrokerDataProvider**,
-**IBrokerStateProvider and 
-**ITimeProvider**
-for Tellurian Trains Dispatch.
 
-## Project Purpose
-This projectaims to implement data providers:
-- **IBrokerConfiguration**
-- **ITimeProvider**
+This project contains data providers implementing interfaces for Tellurian Trains Dispatch.
 
-### IBrokerConfiguration
-The project aims to contain the following concrete implementations:
-- **JsonFileBrokerDataProvider**, read configuration from a JSON file.
-- **IBrokerDataProvider**, read configuratio from a Microsoft Access database using the ODBC data provider.
+## Data Providers
 
-### IBrokerStateProvider
-The project aims to contain the following concrete implementations:
-- **JsonFileBrokerStateProvider**, read broker state from a JSON file.
-- 
+### IBrokerDataProvider
+Provides initial layout and train configuration to the Broker.
+
+**Implementation:**
+- **TimetableBrokerDataProvider** - Converts data from `Tellurian.Trains.Schedules.Model` to Dispatch domain types.
+  - Supports XPLN .ODS files via `XplnBrokerDataProviderFactory`
+  - Can be extended to support .XLSX and relational databases via the Schedules.Model ecosystem
+
+### ICompositeStateProvider / IStateProvider
+Persists and restores dispatch and train state changes.
+
+**Implementations:**
+- **InMemoryCompositeStateProvider** - In-memory state for testing (no persistence)
+- **CsvCompositeStateProvider** - Event-sourced persistence using CSV files
+  - `CsvTrainStateProvider` - Records train state changes
+  - `CsvDispatchStateProvider` - Records dispatch state changes and signal passages
+
 ### ITimeProvider
-The project aims to contain the following concrete implementations:
-- **TellurianFastclockTimeProvider**, fetch current fast clock time from the Tellurian Fastclock,
-  either from the cloud instance or from a locally hosted clock server. 
-  Both are using https or http Web API calls.
+Provides the current time for dispatch operations.
 
+**Implementation:**
+- **TellurianFastclockTimeProvider** - Fetches current fast clock time from the Tellurian Fastclock service (cloud or local).

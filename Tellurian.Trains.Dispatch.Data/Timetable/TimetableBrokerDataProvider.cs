@@ -12,12 +12,14 @@ namespace Tellurian.Trains.Dispatch.Data.Timetable;
 /// the <see cref="ModelTimetable"/> model to Dispatch domain types.
 /// </summary>
 /// <remarks>
-/// This adapter enables using timetable data imported from XPLN spreadsheets
-/// or other sources with the Dispatch broker.
+/// This adapter enables using timetable data imported from XPLN spreadsheets,
+/// JSON files, databases, or other sources with the Dispatch broker.
+/// The timetable is loaded lazily when the first data method is called.
 /// </remarks>
 public class TimetableBrokerDataProvider : IBrokerDataProvider
 {
-    private readonly ModelTimetable _timetable;
+    private readonly Func<Task<ModelTimetable>> _timetableLoader;
+    private ModelTimetable? _timetable;
 
     // Cached converted data
     private Dictionary<int, OperationPlace>? _operationPlaces;
@@ -31,47 +33,71 @@ public class TimetableBrokerDataProvider : IBrokerDataProvider
     private Dictionary<int, Station>? _stationsByModelId;
 
     /// <summary>
+    /// Creates a new TimetableBrokerDataProvider with a loader function.
+    /// </summary>
+    /// <param name="timetableLoader">
+    /// A function that loads the timetable when called.
+    /// This enables lazy loading - the timetable is only loaded when data is first requested.
+    /// </param>
+    public TimetableBrokerDataProvider(Func<Task<ModelTimetable>> timetableLoader)
+    {
+        _timetableLoader = timetableLoader ?? throw new ArgumentNullException(nameof(timetableLoader));
+    }
+
+    /// <summary>
     /// Creates a new TimetableBrokerDataProvider from a fully-loaded timetable.
     /// </summary>
     /// <param name="timetable">The timetable containing layout and train data.</param>
     public TimetableBrokerDataProvider(ModelTimetable timetable)
     {
         _timetable = timetable ?? throw new ArgumentNullException(nameof(timetable));
+        _timetableLoader = () => Task.FromResult(_timetable);
     }
 
-    public Task<IEnumerable<OperationPlace>> GetOperationPlacesAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<OperationPlace>> GetOperationPlacesAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureTimetableLoadedAsync().ConfigureAwait(false);
         EnsureOperationPlacesConverted();
-        return Task.FromResult<IEnumerable<OperationPlace>>(_operationPlaces!.Values);
+        return _operationPlaces!.Values;
     }
 
-    public Task<IEnumerable<DispatchTrackStretch>> GetTrackStretchesAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<DispatchTrackStretch>> GetTrackStretchesAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureTimetableLoadedAsync().ConfigureAwait(false);
         EnsureOperationPlacesConverted();
         EnsureTrackStretchesConverted();
-        return Task.FromResult<IEnumerable<DispatchTrackStretch>>(_trackStretches!.Values);
+        return _trackStretches!.Values;
     }
 
-    public Task<IEnumerable<DispatchStretch>> GetDispatchStretchesAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<DispatchStretch>> GetDispatchStretchesAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureTimetableLoadedAsync().ConfigureAwait(false);
         EnsureOperationPlacesConverted();
         EnsureTrackStretchesConverted();
         EnsureDispatchStretchesConverted();
-        return Task.FromResult<IEnumerable<DispatchStretch>>(_dispatchStretches!);
+        return _dispatchStretches!;
     }
 
-    public Task<IEnumerable<DispatchTrain>> GetTrainsAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<DispatchTrain>> GetTrainsAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureTimetableLoadedAsync().ConfigureAwait(false);
         EnsureTrainsConverted();
-        return Task.FromResult<IEnumerable<DispatchTrain>>(_trains!.Values);
+        return _trains!.Values;
     }
 
-    public Task<IEnumerable<TrainStationCall>> GetTrainStationCallsAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<TrainStationCall>> GetTrainStationCallsAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureTimetableLoadedAsync().ConfigureAwait(false);
         EnsureOperationPlacesConverted();
         EnsureTrainsConverted();
         EnsureTrainStationCallsConverted();
-        return Task.FromResult<IEnumerable<TrainStationCall>>(_trainStationCalls!);
+        return _trainStationCalls!;
+    }
+
+    private async Task EnsureTimetableLoadedAsync()
+    {
+        if (_timetable is not null) return;
+        _timetable = await _timetableLoader().ConfigureAwait(false);
     }
 
     private void EnsureOperationPlacesConverted()
@@ -82,7 +108,7 @@ public class TimetableBrokerDataProvider : IBrokerDataProvider
         _operationPlacesByModelId = [];
         _stationsByModelId = [];
 
-        foreach (var location in _timetable.Layout.OperationLocations)
+        foreach (var location in _timetable!.Layout.OperationLocations)
         {
             var place = location.ToOperationPlace();
             _operationPlaces[place.Id] = place;
@@ -100,7 +126,7 @@ public class TimetableBrokerDataProvider : IBrokerDataProvider
 
         _trackStretches = [];
 
-        foreach (var modelStretch in _timetable.Layout.TrackStretches)
+        foreach (var modelStretch in _timetable!.Layout.TrackStretches)
         {
             var dispatchStretch = modelStretch.ToDispatchTrackStretch(_operationPlacesByModelId!);
             if (dispatchStretch is not null)
@@ -116,7 +142,7 @@ public class TimetableBrokerDataProvider : IBrokerDataProvider
 
         _dispatchStretches = [];
 
-        foreach (var modelDispatchStretch in _timetable.Layout.DispatchStretches)
+        foreach (var modelDispatchStretch in _timetable!.Layout.DispatchStretches)
         {
             var dispatchStretch = modelDispatchStretch.ToDispatchStretch(
                 _stationsByModelId!,
@@ -135,7 +161,7 @@ public class TimetableBrokerDataProvider : IBrokerDataProvider
 
         _trains = [];
 
-        foreach (var modelTrain in _timetable.Trains)
+        foreach (var modelTrain in _timetable!.Trains)
         {
             var dispatchTrain = modelTrain.ToDispatchTrain();
             _trains[dispatchTrain.Id] = dispatchTrain;
@@ -151,7 +177,7 @@ public class TimetableBrokerDataProvider : IBrokerDataProvider
         // Build mapping from model train to dispatch train by identity
         var trainMapping = BuildTrainMapping();
 
-        foreach (var modelTrain in _timetable.Trains)
+        foreach (var modelTrain in _timetable!.Trains)
         {
             if (!trainMapping.TryGetValue(modelTrain.Id, out var dispatchTrain))
                 continue;
@@ -176,7 +202,7 @@ public class TimetableBrokerDataProvider : IBrokerDataProvider
     private Dictionary<int, DispatchTrain> BuildTrainMapping()
     {
         var mapping = new Dictionary<int, DispatchTrain>();
-        var modelTrains = _timetable.Trains.ToList();
+        var modelTrains = _timetable!.Trains.ToList();
         var dispatchTrains = _trains!.Values.ToList();
 
         foreach (var modelTrain in modelTrains)

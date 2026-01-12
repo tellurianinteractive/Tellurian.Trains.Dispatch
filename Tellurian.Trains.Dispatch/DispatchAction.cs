@@ -52,29 +52,29 @@ public enum DispatchAction
     // Train actions (performed by train operator/crew)
 
     /// <summary>
-    /// Train crew has been assigned (train is manned).
+    /// Assign a driver/crew to the train (train becomes manned).
     /// </summary>
-    Manned,
+    AssignDriver,
 
     /// <summary>
-    /// Train starts its journey (begins running).
+    /// Start the train's journey (train begins running).
     /// </summary>
-    Running,
+    Start,
 
     /// <summary>
-    /// Train is canceled before it starts running.
+    /// Cancel the train before it starts running.
     /// </summary>
-    Canceled,
+    Cancel,
 
     /// <summary>
-    /// Train operation is aborted while running.
+    /// Abort train operation while running.
     /// </summary>
-    Aborted,
+    Abort,
 
     /// <summary>
-    /// Train has completed its entire journey.
+    /// Complete the train's entire journey.
     /// </summary>
-    Completed,
+    Complete,
 
     /// <summary>
     /// Undo the last train state change, reverting to the previous state.

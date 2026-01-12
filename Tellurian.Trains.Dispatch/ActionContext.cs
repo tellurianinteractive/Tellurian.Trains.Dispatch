@@ -44,11 +44,11 @@ public record ActionContext(
     /// Returns true if this is a train action (performed by train crew/operator).
     /// </summary>
     public bool IsTrainAction => Action is
-        DispatchAction.Manned or
-        DispatchAction.Running or
-        DispatchAction.Canceled or
-        DispatchAction.Aborted or
-        DispatchAction.Completed or
+        DispatchAction.AssignDriver or
+        DispatchAction.Start or
+        DispatchAction.Cancel or
+        DispatchAction.Abort or
+        DispatchAction.Complete or
         DispatchAction.UndoTrainState;
 
     /// <summary>
