@@ -18,6 +18,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Tellurian.Trains.Schedules.Model" Version="2.1.0" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Update="Microsoft.Testing.Extensions.AzureDevOpsReport" Version="2.0.2" />
 	</ItemGroup>
 
@@ -47,6 +51,10 @@
 
 	<ItemGroup>
 		<PackageReference Update="MSTest.TestFramework" Version="4.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.3.2" />
 	</ItemGroup>
 
 </Project>

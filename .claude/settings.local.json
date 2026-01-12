@@ -12,7 +12,8 @@
       "WebFetch(domain:www.mw-modellbau.de)",
       "Bash(xcopy:*)",
       "Bash(findstr:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

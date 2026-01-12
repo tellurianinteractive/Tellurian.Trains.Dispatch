@@ -148,9 +148,9 @@ public class CsvStateProviderTests
         var filePath = Path.Combine(_testDirectory, "dispatch-state.csv");
         Assert.IsTrue(File.Exists(filePath), "Dispatch state file should exist");
         var content = await File.ReadAllTextAsync(filePath);
-        Assert.Contains(content, "Requested", "File should contain Requested state");
-        Assert.Contains(content, "Departed", "File should contain Departed state");
-        Assert.Contains(content, "Pass", "File should contain Pass event");
+        Assert.Contains("Requested", content, "File should contain Requested state");
+        Assert.Contains("Departed", content, "File should contain Departed state");
+        Assert.Contains("Pass", content, "File should contain Pass event");
     }
 
     [TestMethod]

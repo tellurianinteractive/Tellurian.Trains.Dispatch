@@ -47,4 +47,8 @@
     <PackageReference Update="MSTest.TestFramework" Version="4.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.3.2" />
+  </ItemGroup>
+
 </Project>

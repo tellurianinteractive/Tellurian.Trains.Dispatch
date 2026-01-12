@@ -20,8 +20,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CsvHelper" Version="33.0.1" />
-		<PackageReference Include="System.Data.Odbc" Version="10.0.0" />
+		<PackageReference Include="CsvHelper" Version="33.1.0" />
+		<PackageReference Include="System.Data.Odbc" Version="10.0.1" />
+		<PackageReference Include="Tellurian.Trains.Schedules.Importers.Xpln" Version="2.1.0" />
+		<PackageReference Include="Tellurian.Trains.Schedules.Model" Version="2.1.0" />
+
 	</ItemGroup>
 
 	<ItemGroup>
