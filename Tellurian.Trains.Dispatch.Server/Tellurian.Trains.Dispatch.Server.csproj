@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
-		<AssemblyName>Tellurian.Trains.Dispatch.Api</AssemblyName>
-		<RootNamespace>Tellurian.Trains.Dispatch.Api</RootNamespace>
+		<AssemblyName>Tellurian.Trains.Dispatch.Server</AssemblyName>
+		<RootNamespace>Tellurian.Trains.Dispatch.Server</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -12,7 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
 	</ItemGroup>
 
 </Project>

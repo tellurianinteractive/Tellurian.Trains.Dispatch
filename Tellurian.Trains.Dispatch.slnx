@@ -5,14 +5,14 @@
     <File Path="README.de.md" />
     <File Path="README.md" />
     <File Path="README.sv.md" />
-    <File Path="RgZm.md" />
-    <File Path="SPECIFICATION.md" />
-    <File Path="ZN800.md" />
+    <File Path="Specifications/RgZm.md" />
+    <File Path="Specifications/SPECIFICATION.md" />
+    <File Path="Specifications/ZN800.md" />
   </Folder>
   <Project Path="Tellurian.Trains.Dispatch/Tellurian.Trains.Dispatch.csproj" />
   <Project Path="Tellurian.Trains.Dispatch.Data/Tellurian.Trains.Dispatch.Data.csproj" />
   <Project Path="Tellurian.Trains.Dispatch.Shared/Tellurian.Trains.Dispatch.Shared.csproj" />
-  <Project Path="Tellurian.Trains.Dispatch.Api/Tellurian.Trains.Dispatch.Api.csproj" />
   <Project Path="Tellurian.Trains.Dispatch.Tests/Tellurian.Trains.Dispatch.Tests.csproj" />
+  <Project Path="Tellurian.Trains.Dispatch.Server/Tellurian.Trains.Dispatch.Server.csproj" />
   <Project Path="Tellurian.Trains.Dispatch.Data.Tests/Tellurian.Trains.Dispatch.Data.Tests.csproj" />
 </Solution>

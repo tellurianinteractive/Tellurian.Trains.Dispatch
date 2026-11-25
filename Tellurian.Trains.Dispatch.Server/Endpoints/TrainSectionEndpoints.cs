@@ -1,11 +1,11 @@
-using Tellurian.Trains.Dispatch.Api.Mapping;
-using Tellurian.Trains.Dispatch.Api.Services;
+using Tellurian.Trains.Dispatch.Server.Mapping;
+using Tellurian.Trains.Dispatch.Server.Services;
 using Tellurian.Trains.Dispatch.Brokers;
 using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Shared;
 using Tellurian.Trains.Dispatch.Utilities;
 
-namespace Tellurian.Trains.Dispatch.Api.Endpoints;
+namespace Tellurian.Trains.Dispatch.Server.Endpoints;
 
 /// <summary>
 /// Minimal API endpoints for train section actions.

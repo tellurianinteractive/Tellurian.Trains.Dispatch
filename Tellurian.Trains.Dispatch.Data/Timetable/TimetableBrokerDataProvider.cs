@@ -3,7 +3,7 @@ using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 using DispatchTrackStretch = Tellurian.Trains.Dispatch.Layout.TrackStretch;
 using DispatchTrain = Tellurian.Trains.Dispatch.Trains.Train;
-using ModelTimetable = Tellurian.Trains.Schedules.Model.Timetable;
+using ModelTimetable = Tellurian.Trains.Schedules.Model.Timetables.Timetable;
 
 namespace Tellurian.Trains.Dispatch.Data.Timetable;
 

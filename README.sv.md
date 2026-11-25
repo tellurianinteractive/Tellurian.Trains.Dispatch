@@ -148,7 +148,7 @@ Broker är den centrala koordinatorn. Varje stationstågklarerare presenterar an
 
 ## Krav
 
-- .NET 10.0 eller senare
+- .NET 11.0 eller senare
 - Microsoft.Extensions.DependencyInjection (valfritt, för DI-integration)
 
 ## Licens

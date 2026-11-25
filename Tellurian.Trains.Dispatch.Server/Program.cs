@@ -1,6 +1,6 @@
 using Tellurian.Trains.Dispatch;
-using Tellurian.Trains.Dispatch.Api.Endpoints;
-using Tellurian.Trains.Dispatch.Api.Services;
+using Tellurian.Trains.Dispatch.Server.Endpoints;
+using Tellurian.Trains.Dispatch.Server.Services;
 using Tellurian.Trains.Dispatch.Brokers;
 using Tellurian.Trains.Dispatch.Data;
 

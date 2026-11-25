@@ -152,7 +152,7 @@ The Broker is the central coordinator. Each StationDispatcher presents the arriv
 
 ## Requirements
 
-- .NET 10.0 or later
+- .NET 11.0 or later
 - Microsoft.Extensions.DependencyInjection (optional, for DI integration)
 
 ## License

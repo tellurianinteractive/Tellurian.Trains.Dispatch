@@ -1,6 +1,6 @@
 using Tellurian.Trains.Dispatch.Shared;
 
-namespace Tellurian.Trains.Dispatch.Api.Mapping;
+namespace Tellurian.Trains.Dispatch.Server.Mapping;
 
 /// <summary>
 /// Extension methods for converting domain objects to Data objects with HATEOAS hrefs.

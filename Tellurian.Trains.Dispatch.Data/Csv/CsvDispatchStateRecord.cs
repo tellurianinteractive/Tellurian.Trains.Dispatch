@@ -1,3 +1,5 @@
+using CsvHelper;
+
 namespace Tellurian.Trains.Dispatch.Data.Csv;
 
 /// <summary>
@@ -18,7 +20,8 @@ public enum DispatchStateChangeType
 /// CSV format:
 /// Timestamp,ChangeType,SectionId,State,TrackStretchIndex,SignalPlaceId
 /// </remarks>
-public class CsvDispatchStateRecord
+[CsvRecord]
+public partial class CsvDispatchStateRecord
 {
     /// <summary>
     /// ISO 8601 timestamp of when the change occurred.

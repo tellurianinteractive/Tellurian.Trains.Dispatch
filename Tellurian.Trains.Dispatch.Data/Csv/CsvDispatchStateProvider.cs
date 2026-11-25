@@ -55,7 +55,10 @@ public class CsvDispatchStateProvider : IDispatchStateProvider, IDisposable
     {
         var record = CsvDispatchStateRecord.ForStateChange(sectionId, state, trackStretchIndex);
         await WriteRecordAsync(record).ConfigureAwait(false);
-        _logger.LogDebug("Recorded section {SectionId} dispatch state change to {State}", sectionId, state);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Recorded section {SectionId} dispatch state change to {State}", sectionId, state);
+        }
     }
 
     /// <inheritdoc />
@@ -63,8 +66,11 @@ public class CsvDispatchStateProvider : IDispatchStateProvider, IDisposable
     {
         var record = CsvDispatchStateRecord.ForPass(sectionId, signalControlledPlaceId, newTrackStretchIndex);
         await WriteRecordAsync(record).ConfigureAwait(false);
-        _logger.LogDebug("Recorded pass for section {SectionId} at signal place {SignalPlaceId}, new index {NewIndex}",
-            sectionId, signalControlledPlaceId, newTrackStretchIndex);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Recorded pass for section {SectionId} at signal place {SignalPlaceId}, new index {NewIndex}",
+                sectionId, signalControlledPlaceId, newTrackStretchIndex);
+        }
     }
 
     /// <inheritdoc />
@@ -89,7 +95,10 @@ public class CsvDispatchStateProvider : IDispatchStateProvider, IDisposable
             ApplyRecord(record, sections);
         }
 
-        _logger.LogInformation("Applied {RecordCount} dispatch state records", records.Count);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Applied {RecordCount} dispatch state records", records.Count);
+        }
     }
 
     private static void ApplyRecord(CsvDispatchStateRecord record, Dictionary<int, TrainSection> sections)
@@ -117,7 +126,10 @@ public class CsvDispatchStateProvider : IDispatchStateProvider, IDisposable
         if (File.Exists(_filePath))
         {
             File.Delete(_filePath);
-            _logger.LogInformation("Cleared dispatch state file: {FilePath}", _filePath);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Cleared dispatch state file: {FilePath}", _filePath);
+            }
         }
 
         await Task.CompletedTask;
@@ -130,7 +142,6 @@ public class CsvDispatchStateProvider : IDispatchStateProvider, IDisposable
         lock (_writeLock)
         {
             _csvWriter!.WriteRecord(record);
-            _csvWriter.NextRecord();
             _csvWriter.Flush();
         }
     }

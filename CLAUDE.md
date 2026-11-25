@@ -56,7 +56,7 @@ Broker (singleton) manages:
 StationDispatcher exposes arrivals and departures for its station by querying the Broker.
 
 ## .NET Version
-This project targets .NET 10.0 and the .NET 10 SDK. This is only defined globally in Directory.Build.props.
+This project targets .NET 11.0 and the .NET 11 SDK. This is only defined globally in Directory.Build.props.
 Test projects should use MSTest.Sdk, the Microsoft Testing Platform and NOT VS Test.
 
 ## Documentation

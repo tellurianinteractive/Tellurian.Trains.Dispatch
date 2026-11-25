@@ -56,7 +56,10 @@ public class CsvTrainStateProvider : ITrainStateProvider, IDisposable
     {
         var record = CsvTrainStateRecord.ForStateChange(trainId, state);
         await WriteRecordAsync(record).ConfigureAwait(false);
-        _logger.LogDebug("Recorded train {TrainId} state change to {State}", trainId, state);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Recorded train {TrainId} state change to {State}", trainId, state);
+        }
     }
 
     /// <inheritdoc />
@@ -66,7 +69,10 @@ public class CsvTrainStateProvider : ITrainStateProvider, IDisposable
         // For now, we'll set trainId to 0 and look it up during apply
         var record = CsvTrainStateRecord.ForObservedArrival(trainId: 0, callId, arrivalTime);
         await WriteRecordAsync(record).ConfigureAwait(false);
-        _logger.LogDebug("Recorded observed arrival for call {CallId} at {ArrivalTime}", callId, arrivalTime);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Recorded observed arrival for call {CallId} at {ArrivalTime}", callId, arrivalTime);
+        }
     }
 
     /// <inheritdoc />
@@ -74,7 +80,10 @@ public class CsvTrainStateProvider : ITrainStateProvider, IDisposable
     {
         var record = CsvTrainStateRecord.ForObservedDeparture(trainId: 0, callId, departureTime);
         await WriteRecordAsync(record).ConfigureAwait(false);
-        _logger.LogDebug("Recorded observed departure for call {CallId} at {DepartureTime}", callId, departureTime);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Recorded observed departure for call {CallId} at {DepartureTime}", callId, departureTime);
+        }
     }
 
     /// <inheritdoc />
@@ -82,7 +91,10 @@ public class CsvTrainStateProvider : ITrainStateProvider, IDisposable
     {
         var record = CsvTrainStateRecord.ForTrackChange(trainId: 0, callId, newTrackNumber);
         await WriteRecordAsync(record).ConfigureAwait(false);
-        _logger.LogDebug("Recorded track change for call {CallId} to track {NewTrack}", callId, newTrackNumber);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Recorded track change for call {CallId} to track {NewTrack}", callId, newTrackNumber);
+        }
     }
 
     /// <inheritdoc />
@@ -107,7 +119,10 @@ public class CsvTrainStateProvider : ITrainStateProvider, IDisposable
             ApplyRecord(record, trains, calls, operationPlaces);
         }
 
-        _logger.LogInformation("Applied {RecordCount} train state records", records.Count);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Applied {RecordCount} train state records", records.Count);
+        }
     }
 
     private static void ApplyRecord(
@@ -165,7 +180,10 @@ public class CsvTrainStateProvider : ITrainStateProvider, IDisposable
         if (File.Exists(_filePath))
         {
             File.Delete(_filePath);
-            _logger.LogInformation("Cleared train state file: {FilePath}", _filePath);
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Cleared train state file: {FilePath}", _filePath);
+            }
         }
 
         await Task.CompletedTask;
@@ -178,7 +196,6 @@ public class CsvTrainStateProvider : ITrainStateProvider, IDisposable
         lock (_writeLock)
         {
             _csvWriter!.WriteRecord(record);
-            _csvWriter.NextRecord();
             _csvWriter.Flush();
         }
     }

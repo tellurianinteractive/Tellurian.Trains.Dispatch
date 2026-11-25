@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using System.Text.Json;
-using Tellurian.Trains.Dispatch.Api.Services;
+using Tellurian.Trains.Dispatch.Server.Services;
 using Tellurian.Trains.Dispatch.Shared;
 
-namespace Tellurian.Trains.Dispatch.Api.Endpoints;
+namespace Tellurian.Trains.Dispatch.Server.Endpoints;
 
 /// <summary>
 /// Minimal API endpoints for Server-Sent Events (SSE).

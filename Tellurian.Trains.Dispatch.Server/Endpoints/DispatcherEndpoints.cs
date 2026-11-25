@@ -1,8 +1,8 @@
-using Tellurian.Trains.Dispatch.Api.Mapping;
 using Tellurian.Trains.Dispatch.Brokers;
+using Tellurian.Trains.Dispatch.Server.Mapping;
 using Tellurian.Trains.Dispatch.Shared;
 
-namespace Tellurian.Trains.Dispatch.Api.Endpoints;
+namespace Tellurian.Trains.Dispatch.Server.Endpoints;
 
 /// <summary>
 /// Minimal API endpoints for dispatcher operations.

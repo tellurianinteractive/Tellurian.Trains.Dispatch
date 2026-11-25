@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using Tellurian.Trains.Dispatch.Shared;
 
-namespace Tellurian.Trains.Dispatch.Api.Services;
+namespace Tellurian.Trains.Dispatch.Server.Services;
 
 /// <summary>
 /// Service for broadcasting dispatch events to connected SSE clients.
@@ -32,7 +32,10 @@ public sealed class DispatchEventService : IDisposable
     public async ValueTask PublishAsync(DispatchEvent evt, CancellationToken cancellationToken = default)
     {
         await _channel.Writer.WriteAsync(evt, cancellationToken);
-        _logger.LogDebug("Published event {EventType} for train section {SectionId}", evt.EventType, evt.TrainSectionId);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Published event {EventType} for train section {SectionId}", evt.EventType, evt.TrainSectionId);
+        }
     }
 
     /// <summary>
@@ -52,7 +55,10 @@ public sealed class DispatchEventService : IDisposable
             _subscribers.Add(subscriberChannel);
         }
 
-        _logger.LogInformation("New SSE subscriber connected (dispatcher filter: {DispatcherId})", dispatcherId?.ToString() ?? "none");
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("New SSE subscriber connected (dispatcher filter: {DispatcherId})", dispatcherId?.ToString() ?? "none");
+        }
 
         try
         {

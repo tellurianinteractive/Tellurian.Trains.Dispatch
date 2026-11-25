@@ -1,16 +1,17 @@
 using Tellurian.Trains.Dispatch.Data.Timetable;
 using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
-using Tellurian.Trains.Schedules.Model;
+using Tellurian.Trains.Schedules.Model.Layouts;
+using Tellurian.Trains.Schedules.Model.Timetables;
 using DispatchStation = Tellurian.Trains.Dispatch.Trains.Station;
-using ModelDispatchStretch = Tellurian.Trains.Schedules.Model.DispatchStretch;
-using ModelLayout = Tellurian.Trains.Schedules.Model.Layout;
-using ModelOtherLocation = Tellurian.Trains.Schedules.Model.OtherLocation;
-using ModelStation = Tellurian.Trains.Schedules.Model.Station;
-using ModelStationTrack = Tellurian.Trains.Schedules.Model.StationTrack;
-using ModelTimetable = Tellurian.Trains.Schedules.Model.Timetable;
-using ModelTrackStretch = Tellurian.Trains.Schedules.Model.TrackStretch;
-using ModelTrain = Tellurian.Trains.Schedules.Model.Train;
+using ModelDispatchStretch = Tellurian.Trains.Schedules.Model.Layouts.DispatchStretch;
+using ModelLayout = Tellurian.Trains.Schedules.Model.Layouts.Layout;
+using ModelOtherLocation = Tellurian.Trains.Schedules.Model.Layouts.OtherLocation;
+using ModelStation = Tellurian.Trains.Schedules.Model.Layouts.Station;
+using ModelStationTrack = Tellurian.Trains.Schedules.Model.Layouts.StationTrack;
+using ModelTimetable = Tellurian.Trains.Schedules.Model.Timetables.Timetable;
+using ModelTrackStretch = Tellurian.Trains.Schedules.Model.Layouts.TrackStretch;
+using ModelTrain = Tellurian.Trains.Schedules.Model.Timetables.Train;
 
 namespace Tellurian.Trains.Dispatch.Data.Tests;
 
@@ -164,8 +165,8 @@ public class TimetableBrokerDataProviderTests
             Id = 1,
             Prefix = "Gt",
             Suffix = "",
-            ResourceName = "Godståg",
-            IsFreight = true
+            Name = "Godståg",
+            Content = TrainContent.Cargo
         };
 
         // Create train

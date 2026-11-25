@@ -1,4 +1,4 @@
-﻿<Project Sdk="MSTest.Sdk/4.0.1">
+﻿<Project Sdk="MSTest.Sdk/4.5.3">
 
 	<PropertyGroup>
 		<AssemblyName>Tellurian.Trains.Dispatch.Data.Tests</AssemblyName>
@@ -18,43 +18,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Tellurian.Trains.Schedules.Model" Version="2.1.0" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="Microsoft.Testing.Extensions.AzureDevOpsReport" Version="2.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="Microsoft.Testing.Extensions.CrashDump" Version="2.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="Microsoft.Testing.Extensions.HangDump" Version="2.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="Microsoft.Testing.Extensions.HotReload" Version="2.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="Microsoft.Testing.Extensions.Retry" Version="2.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="2.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="MSTest.TestAdapter" Version="4.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Update="MSTest.TestFramework" Version="4.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.3.2" />
+		<PackageReference Include="Tellurian.Trains.Schedules.Model" Version="4.0.27" />
 	</ItemGroup>
 
 </Project>

@@ -148,7 +148,7 @@ Der Broker ist der zentrale Koordinator. Jeder Bahnhofs-Fahrdienstleiter präsen
 
 ## Anforderungen
 
-- .NET 10.0 oder höher
+- .NET 11.0 oder höher
 - Microsoft.Extensions.DependencyInjection (optional, für DI-Integration)
 
 ## Lizenz

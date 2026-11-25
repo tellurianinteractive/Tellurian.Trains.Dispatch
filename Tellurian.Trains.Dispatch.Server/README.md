@@ -1,6 +1,6 @@
 # Tellurian.Trains.Dispatch.Api
 
-A .NET 10 Minimal API for train dispatching on model railways. Provides REST endpoints for dispatcher operations and Server-Sent Events (SSE) for real-time updates.
+A .NET 11 Minimal API for train dispatching on model railways. Provides REST endpoints for dispatcher operations and Server-Sent Events (SSE) for real-time updates.
 
 ## Design Philosophy
 

@@ -148,7 +148,7 @@ Broker er den centrale koordinator. Hver stationstogleder præsenterer ankomster
 
 ## Krav
 
-- .NET 10.0 eller nyere
+- .NET 11.0 eller nyere
 - Microsoft.Extensions.DependencyInjection (valgfrit, til DI-integration)
 
 ## Licens

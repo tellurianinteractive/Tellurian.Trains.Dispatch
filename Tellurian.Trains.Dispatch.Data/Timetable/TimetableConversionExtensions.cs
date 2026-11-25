@@ -5,15 +5,15 @@ using DispatchDispatchStretch = Tellurian.Trains.Dispatch.Layout.DispatchStretch
 using DispatchStationTrack = Tellurian.Trains.Dispatch.Trains.StationTrack;
 using DispatchTrackStretch = Tellurian.Trains.Dispatch.Layout.TrackStretch;
 using DispatchTrain = Tellurian.Trains.Dispatch.Trains.Train;
-using ModelDispatchStretch = Tellurian.Trains.Schedules.Model.DispatchStretch;
-using ModelOperationLocation = Tellurian.Trains.Schedules.Model.OperationLocation;
-using ModelOtherLocation = Tellurian.Trains.Schedules.Model.OtherLocation;
-using ModelSignalControlledLocation = Tellurian.Trains.Schedules.Model.SignalControlledLocation;
-using ModelStation = Tellurian.Trains.Schedules.Model.Station;
-using ModelStationCall = Tellurian.Trains.Schedules.Model.StationCall;
-using ModelStationTrack = Tellurian.Trains.Schedules.Model.StationTrack;
-using ModelTrackStretch = Tellurian.Trains.Schedules.Model.TrackStretch;
-using ModelTrain = Tellurian.Trains.Schedules.Model.Train;
+using ModelDispatchStretch = Tellurian.Trains.Schedules.Model.Layouts.DispatchStretch;
+using ModelOperationLocation = Tellurian.Trains.Schedules.Model.Layouts.OperationLocation;
+using ModelOtherLocation = Tellurian.Trains.Schedules.Model.Layouts.OtherLocation;
+using ModelSignalControlledLocation = Tellurian.Trains.Schedules.Model.Layouts.SignalControlledLocation;
+using ModelStation = Tellurian.Trains.Schedules.Model.Layouts.Station;
+using ModelStationCall = Tellurian.Trains.Schedules.Model.Timetables.StationCall;
+using ModelStationTrack = Tellurian.Trains.Schedules.Model.Layouts.StationTrack;
+using ModelTrackStretch = Tellurian.Trains.Schedules.Model.Layouts.TrackStretch;
+using ModelTrain = Tellurian.Trains.Schedules.Model.Timetables.Train;
 
 namespace Tellurian.Trains.Dispatch.Data.Timetable;
 
@@ -54,7 +54,7 @@ public static class TimetableConversionExtensions
         /// Converts a model StationTrack to a Dispatch StationTrack.
         /// </summary>
         public DispatchStationTrack ToDispatchStationTrack() =>
-            new(modelTrack.Number)
+            new(modelTrack.Designation)
             {
                 IsMainTrack = modelTrack.IsMain,
                 DisplayOrder = modelTrack.DisplayOrder,
@@ -129,7 +129,7 @@ public static class TimetableConversionExtensions
             return new DispatchTrain(company, identity)
             {
                 Id = 0, // Auto-generate
-                MaxLength = modelTrain.Length.Meters
+                MaxLength = modelTrain.Length.Meters is double meters ? (int)Math.Round(meters) : null
             };
         }
     }
@@ -147,12 +147,12 @@ public static class TimetableConversionExtensions
             Dictionary<int, OperationPlace> operationPlacesById,
             int sequenceNumber)
         {
-            if (!operationPlacesById.TryGetValue(modelCall.Station.Id, out var operationPlace))
+            if (!operationPlacesById.TryGetValue(modelCall.OperationLocation.Id, out var operationPlace))
             {
                 return null;
             }
 
-            var track = operationPlace.Tracks.FirstOrDefault(t => t.Number == modelCall.Track.Number)
+            var track = operationPlace.Tracks.FirstOrDefault(t => t.Number == modelCall.Track.Designation)
                 ?? operationPlace.Tracks.FirstOrDefault();
 
             if (track is null) return null;

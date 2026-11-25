@@ -1,7 +1,7 @@
 using Tellurian.Trains.Dispatch;
 using Tellurian.Trains.Dispatch.Data;
 
-namespace Tellurian.Trains.Dispatch.Api.Services;
+namespace Tellurian.Trains.Dispatch.Server.Services;
 
 /// <summary>
 /// Extension methods for configuring time providers via dependency injection.
