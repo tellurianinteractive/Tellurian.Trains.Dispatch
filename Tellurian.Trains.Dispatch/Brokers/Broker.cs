@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Tellurian.Trains.Dispatch;
 using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
+using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch.Brokers;
 
@@ -29,6 +30,9 @@ public class Broker(
 
     public ITimeProvider TimeProvider { get; } = timeProvider;
 
+    /// <inheritdoc/>
+    public TimeSpan ScheduleStartTime { get; private set; }
+
     /// <summary>
     /// Gets the composite state provider for recording state changes.
     /// </summary>
@@ -38,13 +42,17 @@ public class Broker(
 
     public IEnumerable<ActionContext> GetArrivalActionsFor(IDispatcher dispatcher, int maxItems) =>
         _trainSections.Values
-        .Where(ts => ts.IsVisibleForDispatcher && ts.To.Dispatcher.Id == dispatcher.Id)
+        .Where(ts => ts.IsVisibleForDispatcher && ts.ArrivalDispatcher?.Id == dispatcher.Id)
+        .OrderBy(ts => ts.Arrival.Scheduled.ArrivalTime.InOperatingDayStartingAt(ScheduleStartTime))
+        .ThenBy(ts => ts.Id)
         .Take(maxItems)
         .SelectMany(ts => _actionStateMachine.GetAvailableActions(ts, dispatcher));
 
     public IEnumerable<ActionContext> GetDepartureActionsFor(IDispatcher dispatcher, int maxItems) =>
         _trainSections.Values
-        .Where(ts => ts.IsVisibleForDispatcher && ts.From.Dispatcher.Id == dispatcher.Id)
+        .Where(ts => ts.IsVisibleForDispatcher && ts.DepartureDispatcher?.Id == dispatcher.Id)
+        .OrderBy(ts => ts.Departure.Scheduled.DepartureTime.InOperatingDayStartingAt(ScheduleStartTime))
+        .ThenBy(ts => ts.Id)
         .Take(maxItems)
         .SelectMany(ts => _actionStateMachine.GetAvailableActions(ts, dispatcher));
 
@@ -68,7 +76,11 @@ public class Broker(
         // Always load initial configuration from data provider
         var trains = await _configuration.GetTrainsAsync(cancellationToken).ConfigureAwait(false);
         var calls = await _configuration.GetTrainStationCallsAsync(cancellationToken).ConfigureAwait(false);
-        var trainSections = calls.ToTrainSections(_dispatchStretches.Values, TimeProvider, _logger);
+        ScheduleStartTime = await _configuration.GetScheduleStartTimeAsync(cancellationToken).ConfigureAwait(false);
+        var definitions = (await _configuration.GetTrainSectionsAsync(cancellationToken).ConfigureAwait(false)).ToList();
+        var trainSections = definitions.Count > 0
+            ? definitions.ToTrainSections(TimeProvider, _logger)
+            : calls.ToTrainSections(_dispatchStretches.Values, TimeProvider, _logger);
         _trainSections = WithUpdatedPrevious(trainSections).ToDictionary(d => d.Id);
 
         // On restart, apply saved state from composite state provider
@@ -108,16 +120,17 @@ public class Broker(
         // This function eliminates the need to serialize the Previous propery and cause deep dependency graphs.
         static IEnumerable<TrainSection> WithUpdatedPrevious(IEnumerable<TrainSection> trainSections)
         {
-            int currentTrainId = 0;
-            TrainSection? previous = null;
-            foreach (var trainSection in trainSections.OrderBy(ts => ts.Train.Id).ThenBy(ts => ts.Departure.Scheduled.DepartureTime))
+            var sections = trainSections.ToList();
+            foreach (var train in sections.GroupBy(ts => ts.Train.Id))
             {
-                if (currentTrainId > 0 && currentTrainId != trainSection.Train.Id) continue;
-                trainSection.Previous = previous;
-                previous = trainSection;
-                currentTrainId = trainSection.Train.Id;
+                TrainSection? previous = null;
+                foreach (var trainSection in train.OrderBy(ts => ts.Departure.SequenceNumber))
+                {
+                    trainSection.Previous = previous;
+                    previous = trainSection;
+                }
             }
-            return trainSections;
+            return sections;
         }
     }
 }

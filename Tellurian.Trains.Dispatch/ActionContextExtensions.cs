@@ -18,6 +18,8 @@ public static class ActionContextExtensions
             {
                 // Dispatch actions - change TrainSection.State
                 DispatchAction.Request => context.ExecuteDispatchAction(DispatchState.Requested),
+                // On a branch, accepting the driver's call is the go: the train is on its way.
+                DispatchAction.Accept when context.Section.Kind == TrainSectionKind.OneDispatcherInbound => context.ExecuteDepart(),
                 DispatchAction.Accept => context.ExecuteDispatchAction(DispatchState.Accepted),
                 DispatchAction.Reject => context.ExecuteDispatchAction(DispatchState.Rejected),
                 DispatchAction.Revoke => context.ExecuteDispatchAction(DispatchState.Revoked),
@@ -72,6 +74,15 @@ public static class ActionContextExtensions
                         section.Id, DispatchState.Requested, cancellationToken: cancellationToken).ConfigureAwait(false);
                     break;
 
+                case DispatchAction.Accept when section.Kind == TrainSectionKind.OneDispatcherInbound:
+                    await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
+                        section.Id, DispatchState.Departed, trackStretchIndex: section.CurrentTrackStretchIndex, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    if (train.State == TrainState.Running && train.PreviousState == TrainState.Manned)
+                    {
+                        await stateProvider.TrainStateProvider.RecordTrainStateChangeAsync(
+                            train.Id, TrainState.Running, cancellationToken).ConfigureAwait(false);
+                    }
+                    break;
                 case DispatchAction.Accept:
                     await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
                         section.Id, DispatchState.Accepted, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -88,8 +99,9 @@ public static class ActionContextExtensions
                     break;
 
                 case DispatchAction.Depart:
+                    // On a branch outbound, the section is done when the train departs.
                     await stateProvider.DispatchStateProvider.RecordDispatchStateChangeAsync(
-                        section.Id, DispatchState.Departed, trackStretchIndex: 0, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        section.Id, section.State, trackStretchIndex: section.CurrentTrackStretchIndex, cancellationToken: cancellationToken).ConfigureAwait(false);
                     // Also record implicit train state change to Running if it changed
                     if (train.State == TrainState.Running && train.PreviousState == TrainState.Manned)
                     {
@@ -155,8 +167,12 @@ public static class ActionContextExtensions
 
         private Option<ActionContext> ExecuteDepart()
         {
-            context.Section.State = DispatchState.Departed;
+            // On a branch outbound, the section is done when the train departs.
+            context.Section.State = context.Section.Kind == TrainSectionKind.OneDispatcherOutbound
+                ? DispatchState.Arrived
+                : DispatchState.Departed;
             context.Section.CurrentTrackStretchIndex = 0;
+            context.Section.AdvancePastUncontrolledPlaces();
 
             // Implicitly set train to Running when departing from Manned state
             var train = context.Section.Departure.Train;

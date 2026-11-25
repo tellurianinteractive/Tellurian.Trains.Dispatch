@@ -1,4 +1,4 @@
-﻿using Tellurian.Trains.Dispatch.Layout;
+using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 
 namespace Tellurian.Trains.Dispatch.Brokers;
@@ -12,6 +12,8 @@ namespace Tellurian.Trains.Dispatch.Brokers;
 /// 3. <see cref="GetDispatchStretchesAsync(CancellationToken)"/>
 /// 4. <see cref="GetTrainsAsync(CancellationToken)"/>
 /// 5. <see cref="GetTrainStationCallsAsync(CancellationToken)"/>
+/// 6. <see cref="GetScheduleStartTimeAsync(CancellationToken)"/>
+/// 7. <see cref="GetTrainSectionsAsync(CancellationToken)"/>
 /// </remarks>
 public interface IBrokerDataProvider
 {
@@ -49,4 +51,26 @@ public interface IBrokerDataProvider
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task<IEnumerable<TrainStationCall>> GetTrainStationCallsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the fast clock time the schedule's operating day starts at.
+    /// </summary>
+    /// <remarks>
+    /// Train sections are presented to dispatchers in order of time within the operating day:
+    /// in a schedule running over midnight and starting at 05:00, a train at 00:30 comes after one at 23:30.
+    /// The default is 00:00, so the operating day equals the calendar day.
+    /// </remarks>
+    Task<TimeSpan> GetScheduleStartTimeAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(TimeSpan.Zero);
+
+    /// <summary>
+    /// Gets the <see cref="TrainSection">train sections</see>: where each train runs between the calls it is cleared at,
+    /// and which dispatchers clear it, using the calls from <see cref="GetTrainStationCallsAsync(CancellationToken)"/>.
+    /// </summary>
+    /// <remarks>
+    /// The default is none: the broker then creates a <see cref="TrainSectionKind.Normal"/> section between each
+    /// pair of consecutive calls at the stations of a <see cref="DispatchStretch"/>.
+    /// </remarks>
+    Task<IEnumerable<TrainSectionDefinition>> GetTrainSectionsAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IEnumerable<TrainSectionDefinition>>([]);
 }

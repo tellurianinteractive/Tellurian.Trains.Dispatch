@@ -123,7 +123,7 @@ public static class TrainSectionEndpoints
         }
 
         // Get the control point at the specified index
-        var controlPoints = section.DispatchStretch.IntermediateControlPoints.ToList();
+        var controlPoints = section.IntermediateControlPoints.ToList();
         if (controlPointIndex < 0 || controlPointIndex >= controlPoints.Count)
         {
             return Results.BadRequest(new ActionResultData
@@ -190,7 +190,7 @@ public static class TrainSectionEndpoints
         CancellationToken cancellationToken)
     {
         var train = section.Departure.Train;
-        var affectedDispatcherIds = new List<int> { section.From.Id, section.To.Id };
+        var affectedDispatcherIds = section.Dispatchers.Select(d => d.Id).ToList();
 
         DispatchEvent evt = actionContext.IsTrainAction
             ? new TrainStateChangedEvent
@@ -227,7 +227,7 @@ public static class TrainSectionEndpoints
         CancellationToken cancellationToken)
     {
         var train = section.Departure.Train;
-        var affectedDispatcherIds = new List<int> { section.From.Id, section.To.Id };
+        var affectedDispatcherIds = section.Dispatchers.Select(d => d.Id).ToList();
         if (passTarget.ControlledByDispatcherId > 0)
         {
             affectedDispatcherIds.Add(passTarget.ControlledByDispatcherId);

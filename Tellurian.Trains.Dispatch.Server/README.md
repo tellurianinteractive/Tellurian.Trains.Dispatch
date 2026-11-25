@@ -77,6 +77,8 @@ Returns a dispatcher with arrivals, departures, and available actions for each t
     {
       "id": 42,
       "train": "SJ IC 456",
+      "operatingDay": 1,
+      "kind": "Normal",
       "trainState": "Running",
       "state": "Accepted",
       "from": "A",
@@ -259,7 +261,7 @@ Configure the API in `appsettings.json`:
 **Supported sources:**
 - `Xpln` - Load from XPLN spreadsheet files (.ods)
 - `Json` - Load from JSON schedule files
-- `Database` - Load from SQLite database
+- `Database` - Run from a SQLite database holding a complete schedule imported from the Timetable Planner
 
 All data providers use the `Tellurian.Trains.Schedules.Model` ecosystem.
 
@@ -284,18 +286,33 @@ All data providers use the `Tellurian.Trains.Schedules.Model` ecosystem.
 "DataProvider": {
   "Source": "Database",
   "Database": {
-    "ConnectionString": "Data Source=schedule.db",
-    "ScheduleName": "MySchedule"
+    "FilePath": "Data/schedule.db",
+    "PlanName": "",
+    "ImportFilePath": "C:/Schedules/Värnamo Moduldagar.json"
   }
 }
 ```
+
+| Setting | Description |
+|---------|-------------|
+| `FilePath` | The SQLite database file. Relative paths are relative to the content root. |
+| `PlanName` | Optional. The plan to use; empty to use the only plan in the database. |
+| `ImportFilePath` | Optional. A plan file saved by the Timetable Planner. It is imported at startup when the database does not exist or the plan file is newer than the database, replacing the plan in the database. |
+
+A plan file can also be imported from the command line, without starting the server:
+
+```bash
+dotnet run --project Tellurian.Trains.Dispatch.Server -- import "Värnamo Moduldagar.json" [Data/schedule.db]
+```
+
+The database file defaults to `DataProvider:Database:FilePath`.
 
 If no `Source` is configured, an empty provider is used (for testing).
 
 ## Running the API
 
 ```bash
-dotnet run --project Tellurian.Trains.Dispatch.Api
+dotnet run --project Tellurian.Trains.Dispatch.Server
 ```
 
 The API starts on `http://localhost:5000` by default.

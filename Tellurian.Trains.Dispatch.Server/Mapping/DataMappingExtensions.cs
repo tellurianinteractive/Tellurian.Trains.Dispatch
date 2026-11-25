@@ -74,6 +74,8 @@ public static class DataMappingExtensions
         {
             Id = section.Id,
             Train = train.ToDisplayString(),
+            OperatingDay = train.OperatingDay,
+            Kind = section.Kind.ToString(),
             TrainState = train.State.ToString(),
             State = section.State.ToString(),
             From = section.From.Signature,
@@ -115,7 +117,7 @@ public static class DataMappingExtensions
         if (action.PassTarget is null) return 0;
 
         // Find the index of the pass target in the intermediate control points
-        var controlPoints = action.Section.DispatchStretch.IntermediateControlPoints.ToList();
+        var controlPoints = action.Section.IntermediateControlPoints.ToList();
         var index = controlPoints.FindIndex(cp => cp.Id == action.PassTarget.Id);
         return index >= 0 ? index : 0;
     }

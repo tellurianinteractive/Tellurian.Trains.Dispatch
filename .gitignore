@@ -365,3 +365,8 @@ FodyWeavers.xsd
 
 # Claude Code temp files
 tmpclaude-*
+
+# Local schedule databases
+*.db
+*.db-shm
+*.db-wal

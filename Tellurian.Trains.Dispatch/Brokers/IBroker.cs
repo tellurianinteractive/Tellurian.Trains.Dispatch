@@ -1,4 +1,4 @@
-﻿namespace Tellurian.Trains.Dispatch.Brokers;
+namespace Tellurian.Trains.Dispatch.Brokers;
 
 /// <summary>
 /// Central coordinator for train dispatch operations.
@@ -6,6 +6,12 @@
 public interface IBroker
 {
     ITimeProvider TimeProvider { get; }
+
+    /// <summary>
+    /// Gets the fast clock time the schedule's operating day starts at.
+    /// Arrivals and departures are ordered by time within the operating day.
+    /// </summary>
+    TimeSpan ScheduleStartTime { get; }
 
     /// <summary>
     /// Gets all train sections managed by this broker.

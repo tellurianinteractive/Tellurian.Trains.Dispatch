@@ -1,4 +1,4 @@
-﻿using Tellurian.Trains.Dispatch.Utilities;
+using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch.Trains
 {
@@ -19,6 +19,12 @@ namespace Tellurian.Trains.Dispatch.Trains
         /// Null means no constraint.
         /// </summary>
         public int? MaxLength { get; init; }
+
+        /// <summary>
+        /// The operating day (or session) this train runs on, starting with 1.
+        /// A train that runs on several days is one <see cref="Train"/> per day, each with its own state.
+        /// </summary>
+        public int OperatingDay { get; init; } = 1;
 
         public void RevokeLastStateChange()
         {

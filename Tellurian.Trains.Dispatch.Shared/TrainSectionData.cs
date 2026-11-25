@@ -17,6 +17,19 @@ public record TrainSectionData
     public required string Train { get; init; }
 
     /// <summary>
+    /// The operating day (or session) the train runs on, starting with 1.
+    /// A train running on several days is a separate train each day, with its own state.
+    /// </summary>
+    public int OperatingDay { get; init; } = 1;
+
+    /// <summary>
+    /// How the section is cleared: Normal (between two dispatchers), Leaving or Entering (the train ends/starts or
+    /// leaves/joins the line at a place along it without a dispatcher, cleared between the dispatchers at both ends),
+    /// OneDispatcherOutbound or OneDispatcherInbound (cleared by one dispatcher, such as to or from a branch).
+    /// </summary>
+    public string Kind { get; init; } = "Normal";
+
+    /// <summary>
     /// The operational state of the train (Planned, Manned, Running, etc.).
     /// </summary>
     public required string TrainState { get; init; }

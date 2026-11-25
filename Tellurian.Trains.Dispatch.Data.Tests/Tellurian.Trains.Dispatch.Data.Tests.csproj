@@ -18,7 +18,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Tellurian.Trains.Schedules.Model" Version="4.0.27" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
+		<PackageReference Include="Tellurian.Trains.Schedules.Model" Version="4.0.28" />
 	</ItemGroup>
 
 </Project>

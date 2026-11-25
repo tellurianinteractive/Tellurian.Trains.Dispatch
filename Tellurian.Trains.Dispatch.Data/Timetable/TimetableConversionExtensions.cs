@@ -1,19 +1,20 @@
-using System.Diagnostics;
 using Tellurian.Trains.Dispatch.Layout;
 using Tellurian.Trains.Dispatch.Trains;
 using DispatchDispatchStretch = Tellurian.Trains.Dispatch.Layout.DispatchStretch;
+using DispatchCompany = Tellurian.Trains.Dispatch.Trains.Company;
+using DispatchStation = Tellurian.Trains.Dispatch.Trains.Station;
 using DispatchStationTrack = Tellurian.Trains.Dispatch.Trains.StationTrack;
 using DispatchTrackStretch = Tellurian.Trains.Dispatch.Layout.TrackStretch;
 using DispatchTrain = Tellurian.Trains.Dispatch.Trains.Train;
 using ModelDispatchStretch = Tellurian.Trains.Schedules.Model.Layouts.DispatchStretch;
 using ModelOperationLocation = Tellurian.Trains.Schedules.Model.Layouts.OperationLocation;
-using ModelOtherLocation = Tellurian.Trains.Schedules.Model.Layouts.OtherLocation;
 using ModelSignalControlledLocation = Tellurian.Trains.Schedules.Model.Layouts.SignalControlledLocation;
-using ModelStation = Tellurian.Trains.Schedules.Model.Layouts.Station;
 using ModelStationCall = Tellurian.Trains.Schedules.Model.Timetables.StationCall;
 using ModelStationTrack = Tellurian.Trains.Schedules.Model.Layouts.StationTrack;
 using ModelTrackStretch = Tellurian.Trains.Schedules.Model.Layouts.TrackStretch;
 using ModelTrain = Tellurian.Trains.Schedules.Model.Timetables.Train;
+using Tellurian.Trains.Schedules.Model.Layouts;
+using Tellurian.Trains.Schedules.Model.Timetables;
 
 namespace Tellurian.Trains.Dispatch.Data.Timetable;
 
@@ -27,7 +28,10 @@ public static class TimetableConversionExtensions
         /// <summary>
         /// Converts an OperationLocation to the appropriate OperationPlace type.
         /// </summary>
-        /// <returns>A Station if manned, otherwise an OtherPlace.</returns>
+        /// <returns>
+        /// A Station where a dispatcher is on duty (the model's <c>HasDispatcher</c>); a SignalControlledPlace for a
+        /// signal-controlled location, controlled by the station that works it or by the driver; otherwise an OtherPlace.
+        /// </returns>
         public OperationPlace ToOperationPlace()
         {
             var tracks = location.Tracks
@@ -37,13 +41,16 @@ public static class TimetableConversionExtensions
 
             return location switch
             {
-                ModelStation station =>
-                    new Station(station.Name, station.Signature) { Id = station.Id, IsManned = true, Tracks = tracks },
+                _ when location.HasDispatcher =>
+                    new DispatchStation(location.Name, location.Signature) { Id = location.Id, IsManned = true, Tracks = tracks },
                 ModelSignalControlledLocation signal =>
-                    new SignalControlledPlace(signal.Name, signal.Signature, signal.ControlledBy?.Id ?? 0) { Id = signal.Id, Tracks = tracks },
-                ModelOtherLocation other =>
-                    new OtherPlace(other.Name, other.Signature) { Id = other.Id, Tracks = tracks },
-                _ => throw new UnreachableException(location.GetType().Name)
+                    new SignalControlledPlace(signal.Name, signal.Signature, signal.ControlledBy is { HasDispatcher: true } controller ? controller.Id : 0)
+                    {
+                        Id = signal.Id,
+                        Tracks = tracks,
+                        IsJunction = signal.IsJunction
+                    },
+                _ => new OtherPlace(location.Name, location.Signature) { Id = location.Id, Tracks = tracks }
             };
         }
     }
@@ -122,9 +129,10 @@ public static class TimetableConversionExtensions
                 modelTrain.Category?.Prefix ?? "",
                 modelTrain.Number);
 
-            var company = new Company(
-                modelTrain.Company?.Name ?? "Unknown",
-                modelTrain.Company?.Signature ?? "??");
+            var modelCompany = modelTrain.EffectiveCompany;
+            var company = new DispatchCompany(
+                modelCompany?.Name ?? "Unknown",
+                modelCompany?.Signature ?? "??");
 
             return new DispatchTrain(company, identity)
             {
@@ -152,10 +160,10 @@ public static class TimetableConversionExtensions
                 return null;
             }
 
+            // A place where trains only pass, such as a junction, may have no scheduled tracks.
             var track = operationPlace.Tracks.FirstOrDefault(t => t.Number == modelCall.Track.Designation)
-                ?? operationPlace.Tracks.FirstOrDefault();
-
-            if (track is null) return null;
+                ?? operationPlace.Tracks.FirstOrDefault()
+                ?? new DispatchStationTrack(modelCall.Track.Designation);
 
             var callTime = new CallTime
             {
@@ -182,7 +190,7 @@ public static class TimetableConversionExtensions
         /// <param name="stationsByModelId">Dictionary of converted Stations by model station ID.</param>
         /// <param name="allTrackStretches">All converted TrackStretches for path finding.</param>
         public DispatchDispatchStretch? ToDispatchStretch(
-            Dictionary<int, Station> stationsByModelId,
+            Dictionary<int, DispatchStation> stationsByModelId,
             IEnumerable<DispatchTrackStretch> allTrackStretches)
         {
             if (!stationsByModelId.TryGetValue(modelDispatchStretch.From.Id, out var fromStation) ||

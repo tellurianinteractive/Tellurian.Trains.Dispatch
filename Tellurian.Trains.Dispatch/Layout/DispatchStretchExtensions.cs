@@ -1,5 +1,6 @@
-﻿using Tellurian.Trains.Dispatch;
+using Tellurian.Trains.Dispatch;
 using Tellurian.Trains.Dispatch.Trains;
+using Tellurian.Trains.Dispatch.Utilities;
 
 namespace Tellurian.Trains.Dispatch.Layout;
 
@@ -37,8 +38,14 @@ public static class DispatchStretchExtensions
 
     extension(IEnumerable<DispatchStretch> stretches)
     {
-        internal DispatchStretch FindFor(TrainStationCall departure, TrainStationCall arrival) =>
-            stretches.Single(s => s.Forward.CanHave(departure, arrival) || s.Reverse.CanHave(departure, arrival));
+        /// <summary>
+        /// Creates the <see cref="TrainSectionKind.Normal"/> <see cref="TrainSection"/> between two consecutive calls
+        /// of a train at the stations of a dispatch stretch. Used when the data provider gives no section definitions.
+        /// </summary>
+        internal Option<TrainSection> CreateSection(TrainStationCall departure, TrainStationCall arrival, ITimeProvider timeProvider) =>
+            stretches.FirstOrDefault(s => s.Forward.CanHave(departure, arrival) || s.Reverse.CanHave(departure, arrival)) is { } stretch
+                ? TrainSection.Create(stretch, departure, arrival, timeProvider)
+                : Option<TrainSection>.Fail($"No dispatch stretch between {departure.At} and {arrival.At}.");
     }
 
     extension(TrainSection trainSection)

@@ -86,7 +86,7 @@ public class TimetableBrokerDataProviderTests
     }
 
     [TestMethod]
-    public async Task GetTrainStationCallsAsync_ReturnsConvertedCalls()
+    public async Task GetTrainStationCallsAsync_ReturnsConvertedCallsAtStationsOnly()
     {
         // Arrange
         var timetable = CreateTestTimetable();
@@ -95,13 +95,12 @@ public class TimetableBrokerDataProviderTests
         // Act
         var calls = await provider.GetTrainStationCallsAsync();
 
-        // Assert
+        // Assert: the call at the unmanned halt B is not dispatched.
         var callsList = calls.ToList();
-        Assert.HasCount(3, callsList);
-        Assert.IsTrue(callsList.All(c => c.SequenceNumber >= 0));
+        Assert.HasCount(2, callsList);
+        Assert.IsTrue(callsList.All(c => c.At is DispatchStation));
         Assert.AreEqual(0, callsList[0].SequenceNumber);
         Assert.AreEqual(1, callsList[1].SequenceNumber);
-        Assert.AreEqual(2, callsList[2].SequenceNumber);
     }
 
     [TestMethod]
@@ -117,19 +116,136 @@ public class TimetableBrokerDataProviderTests
         // Assert
         var callsList = calls.OrderBy(c => c.SequenceNumber).ToList();
         Assert.AreEqual(TimeSpan.FromHours(8), callsList[0].Scheduled.DepartureTime);
-        Assert.AreEqual(TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(15)), callsList[1].Scheduled.ArrivalTime);
+        Assert.AreEqual(TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(30)), callsList[1].Scheduled.ArrivalTime);
     }
 
-    private static ModelTimetable CreateTestTimetable()
+    [TestMethod]
+    public async Task GetScheduleStartTimeAsync_ReturnsStartTime()
+    {
+        var timetable = CreateTestTimetable();
+        timetable.Layout.Settings.General.StartTime = TimeSpan.FromHours(7);
+        var provider = new TimetableBrokerDataProvider(timetable);
+
+        Assert.AreEqual(TimeSpan.FromHours(7), await provider.GetScheduleStartTimeAsync());
+    }
+
+    [TestMethod]
+    public async Task GetScheduleStartTimeAsync_RunsOverMidnight_ReturnsFirstSessionStartTime()
+    {
+        var timetable = CreateTestTimetable();
+        timetable.Layout.Settings.General.RunsOverMidnight = true;
+        timetable.Layout.Settings.General.FirstSessionStartTime = TimeSpan.FromHours(5);
+        var provider = new TimetableBrokerDataProvider(timetable);
+
+        Assert.AreEqual(TimeSpan.FromHours(5), await provider.GetScheduleStartTimeAsync());
+    }
+
+    [TestMethod]
+    public async Task GetTrainsAsync_CreatesOneTrainPerOperatingDay()
+    {
+        var timetable = CreateTestTimetable();
+        timetable.Layout.Settings.General.MaxSessions = 3;
+        var provider = await LoadAllAsync(timetable);
+
+        var trains = (await provider.GetTrainsAsync()).ToList();
+
+        Assert.HasCount(3, trains);
+        CollectionAssert.AreEqual(Enumerable.Range(1, 3).ToArray(), trains.Select(t => t.OperatingDay).Order().ToArray());
+        Assert.HasCount(3, trains.Select(t => t.Id).Distinct());
+    }
+
+    [TestMethod]
+    public async Task GetTrainsAsync_TrainRunsOnlyInItsSessions()
+    {
+        var timetable = CreateTestTimetable();
+        timetable.Layout.Settings.General.MaxSessions = 6;
+        timetable.Trains.Single().Sessions = Sessions.FromSessionNumbers(2, 5);
+        var provider = await LoadAllAsync(timetable);
+
+        var trains = (await provider.GetTrainsAsync()).ToList();
+
+        Assert.AreEqual("2,5", string.Join(",", trains.Select(t => t.OperatingDay).Order()));
+    }
+
+    [TestMethod]
+    public async Task GetTrainStationCallsAsync_EachOperatingDayHasOwnCallsAndTimes()
+    {
+        var timetable = CreateTestTimetable();
+        timetable.Layout.Settings.General.MaxSessions = 2;
+        var provider = await LoadAllAsync(timetable);
+
+        var calls = (await provider.GetTrainStationCallsAsync()).ToList();
+
+        Assert.HasCount(4, calls);
+        var day2 = calls.Where(c => c.Train.OperatingDay == 2).OrderBy(c => c.SequenceNumber).ToList();
+        Assert.HasCount(2, day2);
+        Assert.AreEqual(TimeSpan.FromDays(1) + TimeSpan.FromHours(8), day2[0].Scheduled.DepartureTime);
+        Assert.HasCount(4, calls.Select(c => c.Id).Distinct());
+    }
+
+    [TestMethod]
+    public async Task GetTrainsAsync_TrainArrivingBeforeFirstSessionStart_DoesNotRunInFirstSession()
+    {
+        var timetable = CreateTestTimetable();
+        var general = timetable.Layout.Settings.General;
+        general.MaxSessions = 2;
+        general.RunsOverMidnight = true;
+        general.FirstSessionStartTime = TimeSpan.FromHours(9); // The train starts 08:00, before the first day starts.
+        var provider = await LoadAllAsync(timetable);
+
+        var trains = (await provider.GetTrainsAsync()).ToList();
+        var calls = (await provider.GetTrainStationCallsAsync()).OrderBy(c => c.SequenceNumber).ToList();
+
+        Assert.AreEqual(2, trains.Single().OperatingDay);
+        Assert.AreEqual(TimeSpan.FromDays(1) + TimeSpan.FromHours(8), calls[0].Scheduled.DepartureTime);
+    }
+
+    [TestMethod]
+    public async Task GetTrainsAsync_TrainArrivingAtFirstSessionStart_RunsInFirstSession()
+    {
+        var timetable = CreateTestTimetable();
+        var general = timetable.Layout.Settings.General;
+        general.RunsOverMidnight = true;
+        general.FirstSessionStartTime = TimeSpan.FromHours(8);
+        var provider = await LoadAllAsync(timetable);
+
+        var trains = (await provider.GetTrainsAsync()).ToList();
+
+        Assert.AreEqual(1, trains.Single().OperatingDay);
+    }
+
+    [TestMethod]
+    public async Task GetTrainsAsync_NotRunningOverMidnight_IgnoresFirstSessionStartTime()
+    {
+        var timetable = CreateTestTimetable();
+        timetable.Layout.Settings.General.FirstSessionStartTime = TimeSpan.FromHours(9);
+        var provider = await LoadAllAsync(timetable);
+
+        var trains = (await provider.GetTrainsAsync()).ToList();
+
+        Assert.AreEqual(1, trains.Single().OperatingDay);
+    }
+
+    private static async Task<TimetableBrokerDataProvider> LoadAllAsync(ModelTimetable timetable)
+    {
+        var provider = new TimetableBrokerDataProvider(timetable);
+        await provider.GetOperationPlacesAsync();
+        await provider.GetTrackStretchesAsync();
+        await provider.GetDispatchStretchesAsync();
+        return provider;
+    }
+
+    internal static ModelTimetable CreateTestTimetable()
     {
         var layout = new ModelLayout
         {
             Id = 1,
             Name = "Test Layout"
         };
+        layout.Settings.General.MaxSessions = 1;
 
         // Create stations (manned)
-        var stationA = new ModelStation(1, "Station A", "A");
+        var stationA = new ModelStation(1, "Station A", "A") { IsManned = true };
         stationA.Add(new ModelStationTrack(1, "1"));
         stationA.Add(new ModelStationTrack(2, "2"));
         layout.Add(stationA);
@@ -140,7 +256,7 @@ public class TimetableBrokerDataProviderTests
         layout.Add(haltB);
 
         // Create station (manned)
-        var stationC = new ModelStation(3, "Station C", "C");
+        var stationC = new ModelStation(3, "Station C", "C") { IsManned = true };
         stationC.Add(new ModelStationTrack(4, "1"));
         stationC.Add(new ModelStationTrack(5, "2"));
         layout.Add(stationC);

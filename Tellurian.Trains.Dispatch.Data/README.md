@@ -81,8 +81,43 @@ var provider = new TimetableBrokerDataProvider(timetable);
 
 The `Tellurian.Trains.Schedules.Model` ecosystem supports loading timetables from:
 - **XPLN spreadsheets** (.ods) via `Tellurian.Trains.Schedules.Importers.Xpln`
-- **JSON files** via JSON via `Tellurian.Trains.Schedules.Model.Data`
-- **Relational databases** via `Tellurian.Trains.Schedules.Model.Data`
+- **Plan files** (JSON, as saved by the Timetable Planner) via `Tellurian.Trains.Schedules.Importers.Services`
+- **Relational databases** via `Tellurian.Trains.Schedules.Model.Databases`
+
+How the plan is used for dispatching. The rules of the plan are the timetable model's, and are taken from it:
+- **Dispatchers.** Stations with a dispatcher on duty (the model's `HasDispatcher`: manned or shadow stations)
+  become `Station`s. Signal-controlled locations become `SignalControlledPlace`s, controlled by the station that
+  works them, or worked by the driver. Other locations become `OtherPlace`s.
+- **Sessions.** Each train runs on the sessions or days the model gives (`plan.SessionNumbersOf(train)`): the ones
+  its sessions include within the operating period, except the first when the train or its driver duty starts
+  before the meeting begins (`FirstSessionStartTime`). It is a separate `Train` with its own calls, ids and state on
+  each (`Train.OperatingDay`). Its times are given within the whole period: day 2 at 05:20 is `1.05:20`.
+  Create the provider from the whole `Plan` (not only its `Timetable`) so the driver duties are known.
+- **Who clears what.** The model's dispatch legs (`train.DispatchLegs`) say who has to agree on each part of a run.
+  They are given to the broker as train sections (`GetTrainSectionsAsync`). A leg a dispatcher clears alone up to a
+  junction they work from afar is presented together with the leg beyond it.
+- The **schedule start time** is the model's `SessionStart`. Dispatchers' arrivals and departures are ordered by
+  time within the operating day from that start: with a start at 05:00, a train at 00:30 comes after one at 23:30.
+
+### Schedule Database
+
+**`ScheduleDatabase`** - Holds one complete schedule (a `Plan`) in a relational database, for example
+imported from a Timetable Planner plan file, and serves it to the broker. It works with any EF Core
+provider; add the provider package yourself, e.g. `Microsoft.EntityFrameworkCore.Sqlite`.
+
+```csharp
+var options = new DbContextOptionsBuilder<ScheduleDbContext>()
+    .UseSqlite("Data Source=schedule.db")
+    .Options;
+var database = new ScheduleDatabase(options);
+
+// Import a plan file saved by the Timetable Planner (replaces any plan in the database).
+var imported = await database.ImportPlanFileAsync("Värnamo Moduldagar.json");
+if (imported.IsFail) Console.WriteLine(imported.Error);
+
+// Run the broker from the database.
+var dataProvider = database.CreateBrokerDataProvider(); // or CreateBrokerDataProvider("Plan name")
+```
 
 ### State Providers
 

@@ -34,8 +34,11 @@ namespace Tellurian.Trains.Dispatch.Layout;
 public record SignalControlledPlace(string Name, string Signature, int ControlledByDispatcherId)
     : OperationPlace(Name, Signature)
 {
+    /// <summary>
+    /// The dispatcher who controls the signals here, or null where the driver works them.
+    /// </summary>
     [JsonIgnore] // To avoid circular refernces
-    public IDispatcher ControlledBy { get; internal set; } = default!;
+    public IDispatcher? ControlledBy { get; internal set; }
     /// <summary>
     /// True if this is a junction point with diverging routes.
     /// </summary>
@@ -49,7 +52,5 @@ public record SignalControlledPlace(string Name, string Signature, int Controlle
     public override bool IsControlled => true;
 
     public override string ToString() =>
-        IsJunction
-            ? $"{Name} ({Signature}), junction controlled by {ControlledBy.Name}"
-            : $"{Name} ({Signature}) controlled by {ControlledBy.Name}";
+        $"{Name} ({Signature}){(IsJunction ? ", junction" : "")} {(ControlledBy is null ? "worked by the driver" : $"controlled by {ControlledBy.Name}")}";
 }

@@ -8,9 +8,11 @@ public static class TrainSectionExtensions
 {
     extension(TrainSection trainSection)
     {
-        public Station From => trainSection.StretchDirection.From;
-        public Station To => trainSection.StretchDirection.To;
-        public StretchDirection TrainDirection => trainSection.StretchDirection.Direction;
+        /// <summary>The place the train departs from in this section.</summary>
+        public OperationPlace From => trainSection.Departure.At;
+        /// <summary>The place the train arrives at, or leaves the dispatch stretch at, in this section.</summary>
+        public OperationPlace To => trainSection.Arrival.At;
+        public StretchDirection TrainDirection => trainSection.StretchDirection?.Direction ?? StretchDirection.Forward;
         internal Train Train => trainSection.Departure.Train;
         public bool IsFirst => trainSection.Previous is null;
         public bool IsLast => trainSection.Arrival.IsDeparture == false;

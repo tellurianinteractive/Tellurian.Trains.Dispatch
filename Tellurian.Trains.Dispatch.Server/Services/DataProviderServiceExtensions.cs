@@ -3,7 +3,7 @@ using Tellurian.Trains.Dispatch.Data.Timetable;
 using Tellurian.Trains.Schedules.Importers.Services;
 using Tellurian.Trains.Schedules.Importers.Xpln.DataSetProviders;
 using Tellurian.Trains.Schedules.Model;
-using Tellurian.Trains.Schedules.Model.Timetables;
+using Tellurian.Trains.Schedules.Model.Schedules;
 
 namespace Tellurian.Trains.Dispatch.Server.Services;
 
@@ -21,12 +21,17 @@ public static class DataProviderServiceExtensions
         /// Configuration in appsettings.json:
         /// <code>
         /// "DataProvider": {
-        ///   "Source": "Xpln",  // or "Json"
+        ///   "Source": "Xpln",  // or "Json" or "Database"
         ///   "Xpln": {
         ///     "FilePath": "path/to/file.ods",
         ///     "OperatingCompaniesFilePath": "path/to/OperatingCompanies.json"  // optional
         ///   },
-        ///   "Json": { "FilePath": "path/to/schedule.json" }
+        ///   "Json": { "FilePath": "path/to/schedule.json" },
+        ///   "Database": {
+        ///     "FilePath": "path/to/schedule.db",
+        ///     "PlanName": "",  // optional, defaults to the only plan in the database
+        ///     "ImportFilePath": "path/to/plan.json"  // optional Timetable Planner plan file
+        ///   }
         /// }
         /// </code>
         /// </remarks>
@@ -39,6 +44,7 @@ public static class DataProviderServiceExtensions
             {
                 "xpln" => services.AddXplnDataProvider(section),
                 "json" => services.AddJsonDataProvider(section),
+                "database" => services.AddDatabaseDataProvider(section),
                 _ => services.AddEmptyDataProvider()
             };
         }
@@ -104,7 +110,7 @@ public static class DataProviderServiceExtensions
                     ? filePath
                     : Path.Combine(env.ContentRootPath, filePath);
 
-                Task<Timetable> loader() => LoadJsonTimetableAsync(fullPath);
+                Task<Plan> loader() => LoadJsonPlanAsync(fullPath);
 
                 return new TimetableBrokerDataProvider(loader);
             });
@@ -112,7 +118,7 @@ public static class DataProviderServiceExtensions
             return services;
         }
 
-        private static async Task<Timetable> LoadJsonTimetableAsync(string filePath)
+        private static async Task<Plan> LoadJsonPlanAsync(string filePath)
         {
             var fileInfo = new FileInfo(filePath);
 
@@ -137,8 +143,43 @@ public static class DataProviderServiceExtensions
                 throw new InvalidDataException($"JSON import failed: {string.Join("; ", errors)}");
             }
 
-            return result.Item.Timetable;
+            return result.Item;
         }
+
+        private IServiceCollection AddDatabaseDataProvider(IConfigurationSection section)
+        {
+            var databaseSection = section.GetSection("Database");
+            var filePath = databaseSection["FilePath"];
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new InvalidOperationException(
+                    "DataProvider:Database:FilePath must be configured when Source is 'Database'");
+            }
+
+            services.AddSingleton(sp =>
+            {
+                var env = sp.GetRequiredService<IWebHostEnvironment>();
+                var importFilePath = databaseSection["ImportFilePath"];
+                return new DatabaseScheduleSettings
+                {
+                    DatabasePath = FullPath(env, filePath),
+                    PlanName = databaseSection["PlanName"],
+                    ImportFilePath = string.IsNullOrWhiteSpace(importFilePath) ? null : FullPath(env, importFilePath)
+                };
+            });
+            services.AddSingleton<DatabaseScheduleLoader>();
+            services.AddSingleton<IBrokerDataProvider>(sp =>
+            {
+                var loader = sp.GetRequiredService<DatabaseScheduleLoader>();
+                return new TimetableBrokerDataProvider(() => loader.LoadAsync());
+            });
+
+            return services;
+        }
+
+        private static string FullPath(IWebHostEnvironment env, string path) =>
+            Path.IsPathRooted(path) ? path : Path.Combine(env.ContentRootPath, path);
 
         private IServiceCollection AddEmptyDataProvider()
         {

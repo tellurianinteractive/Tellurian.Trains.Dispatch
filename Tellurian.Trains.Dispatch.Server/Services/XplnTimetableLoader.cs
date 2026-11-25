@@ -2,7 +2,7 @@ using Tellurian.Trains.Schedules.Importers.Services;
 using Tellurian.Trains.Schedules.Importers.Xpln;
 using Tellurian.Trains.Schedules.Importers.Xpln.DataSetProviders;
 using Tellurian.Trains.Schedules.Model;
-using Tellurian.Trains.Schedules.Model.Timetables;
+using Tellurian.Trains.Schedules.Model.Schedules;
 
 namespace Tellurian.Trains.Dispatch.Server.Services;
 
@@ -20,7 +20,7 @@ public sealed class XplnTimetableLoader(
     private readonly TrainCategoriesFromCsvService _trainCategoriesService = trainCategoriesService;
     private readonly ILogger<XplnDataImporter> _importerLogger = importerLogger;
 
-    public async Task<Timetable> LoadAsync(string filePath)
+    public async Task<Plan> LoadAsync(string filePath)
     {
         var fileInfo = new FileInfo(filePath);
 
@@ -51,6 +51,6 @@ public sealed class XplnTimetableLoader(
             throw new InvalidDataException($"XPLN import failed: {string.Join("; ", errors)}");
         }
 
-        return result.Item.Timetable;
+        return result.Item;
     }
 }

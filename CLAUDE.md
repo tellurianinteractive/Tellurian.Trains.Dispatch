@@ -39,6 +39,39 @@ Block occupancy determines capacity:
 
 The dispatcher who controls a block signal (`BlockSignal.ControlledBy`) is presented with the action to mark the passage.
 
+### Rules come from the timetable model
+Plan rules belong in `Tellurian.Trains.Schedules` (Model / Model.Layouts), as extension blocks on the existing types,
+and are only *consumed* here. Dispatch adds only rules that are solely about dispatching. Rules taken from the model:
+- who has a dispatcher (`HasDispatcher`), who works a place from afar (`Dispatcher`, `IsDispatchEndpoint`);
+- which sessions/days a train runs on, including the first session's start (`plan.SessionNumbersOf(train)`):
+  with `RunsOverMidnight`, session 1 excludes trains of driver duties starting before `FirstSessionStartTime`;
+- who clears each part of a train's run (`train.DispatchLegs`: BetweenDispatchers, OneDispatcher, DriverCalls);
+- the train's company (`EffectiveCompany`) and the session start (`SessionStart`).
+
+### Operating Day
+`IBrokerDataProvider.GetScheduleStartTimeAsync` gives the fast clock time the operating day starts at (default 00:00).
+Dispatchers' arrivals and departures are ordered by scheduled time within that day (`InOperatingDayStartingAt`):
+times before the start count as after midnight, so with a 05:00 start, 00:30 sorts after 23:30.
+A train running on several sessions/days is one `Train` per session (`Train.OperatingDay`), each with its own
+train and dispatch state; scheduled times are within the whole period, so day 2 at 05:20 is `1.05:20`.
+
+### Train Section Kinds
+A data provider may give the broker `TrainSectionDefinition`s (`GetTrainSectionsAsync`); otherwise the broker creates
+Normal sections between consecutive calls at the stations of a `DispatchStretch`. A section's `TrainSectionKind` and its
+`FromStation`/`ToStation` decide the roles (`RequestingDispatcher`, `AcceptingDispatcher`, `DepartingDispatcher`,
+`ArrivingDispatcher`, and which lists it is in):
+- **Normal** - between two dispatchers at the places the train departs from and arrives at.
+- **Leaving / Entering** - the train ends/starts or leaves/joins the line at a place along it without a dispatcher;
+  still cleared between the dispatchers at both ends: the train's dispatcher requests, departs and marks the
+  arrival; the other end accepts/rejects.
+- **OneDispatcherOutbound / OneDispatcherInbound** - cleared by one dispatcher (a branch, an end where the driver works
+  the points, a place the dispatcher works alone). Outbound: done when departed. Inbound: the driver phones;
+  accepting is the go (state Departed), then arrive.
+
+Only signals a dispatcher controls divide a section into blocks; places without (industrial areas, unmanned stations,
+driver-worked signals) are passed automatically. The data provider presents a leg a dispatcher clears alone up to a
+junction they work from afar together with the leg beyond it (e.g. Gårdsjö → Tjärby → Rotebro is one Normal section).
+
 ## Architecture Patterns
 
 - **Extension Methods** - Behavior is organized into extension method classes for separation of concerns.

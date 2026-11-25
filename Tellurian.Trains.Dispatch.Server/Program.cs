@@ -6,6 +6,12 @@ using Tellurian.Trains.Dispatch.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Command line: import <plan file> [<database file>]
+if (args.Length > 0 && args[0].Equals(ScheduleImportCommand.Name, StringComparison.OrdinalIgnoreCase))
+{
+    return await ScheduleImportCommand.RunAsync(args[1..], builder.Configuration, builder.Environment.ContentRootPath);
+}
+
 // Add services
 builder.Services.AddSingleton<DispatchEventService>();
 builder.Services.AddSingleton<ICompositeStateProvider, InMemoryCompositeStateProvider>();
@@ -43,4 +49,5 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
     .WithName("HealthCheck")
     .WithTags("Health");
 
-app.Run();
+await app.RunAsync();
+return 0;

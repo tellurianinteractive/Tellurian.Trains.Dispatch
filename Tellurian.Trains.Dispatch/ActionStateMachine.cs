@@ -6,25 +6,24 @@ namespace Tellurian.Trains.Dispatch;
 /// <summary>
 /// Implements the action state machine that determines which actions are available
 /// for a train section based on current state, dispatcher role, and business rules.
-/// This replaces the mixed state/action pattern in the old DispatchState-based approach.
 /// </summary>
+/// <remarks>
+/// The roles (who requests, accepts, departs and marks the arrival) depend on the
+/// <see cref="TrainSectionKind"/> of the section, see <see cref="TrainSection.RequestingDispatcher"/> and the others.
+/// </remarks>
 internal sealed class ActionStateMachine : IActionProvider
 {
-    public IEnumerable<ActionContext> GetAvailableActions(TrainSection section, IDispatcher dispatcher)
-    {
-        // Dispatch actions for departure dispatcher
-        if (IsDepartureDispatcher(section, dispatcher))
-        {
-            foreach (var action in GetDepartureDispatcherActions(section, dispatcher))
-                yield return action;
-        }
+    public IEnumerable<ActionContext> GetAvailableActions(TrainSection section, IDispatcher dispatcher) =>
+        GetActions(section, dispatcher).DistinctBy(a => (a.Action, a.PassTarget?.Id));
 
-        // Dispatch actions for arrival dispatcher
-        if (IsArrivalDispatcher(section, dispatcher))
-        {
-            foreach (var action in GetArrivalDispatcherActions(section, dispatcher))
-                yield return action;
-        }
+    /// <inheritdoc/>
+    public IEnumerable<ActionContext> GetAllAvailableActions(TrainSection section) =>
+        section.Dispatchers.SelectMany(dispatcher => GetAvailableActions(section, dispatcher));
+
+    private static IEnumerable<ActionContext> GetActions(TrainSection section, IDispatcher dispatcher)
+    {
+        foreach (var action in GetDispatchActions(section, dispatcher))
+            yield return action;
 
         // Pass actions for signal-controlled places this dispatcher controls
         foreach (var action in GetPassActions(section, dispatcher))
@@ -39,85 +38,62 @@ internal sealed class ActionStateMachine : IActionProvider
             yield return clearAction;
     }
 
-    /// <inheritdoc/>
-    public IEnumerable<ActionContext> GetAllAvailableActions(TrainSection section)
-    {
-        var departureDispatcher = section.From.Dispatcher;
-        var arrivalDispatcher = section.To.Dispatcher;
-
-        // Get actions from both dispatchers
-        foreach (var action in GetAvailableActions(section, departureDispatcher))
-            yield return action;
-
-        // Avoid duplicates if same dispatcher controls both stations
-        if (departureDispatcher.Id != arrivalDispatcher.Id)
-        {
-            foreach (var action in GetAvailableActions(section, arrivalDispatcher))
-                yield return action;
-        }
-    }
-
-    private static bool IsDepartureDispatcher(TrainSection section, IDispatcher dispatcher) =>
-        section.From.Dispatcher.Id == dispatcher.Id;
-
-    private static bool IsArrivalDispatcher(TrainSection section, IDispatcher dispatcher) =>
-        section.To.Dispatcher.Id == dispatcher.Id;
+    private static bool Is(IDispatcher? role, IDispatcher dispatcher) => role is not null && role.Id == dispatcher.Id;
 
     /// <summary>
-    /// Gets actions available to the departure dispatcher.
+    /// Gets the dispatch actions available to the dispatcher in its roles for the section.
     /// For non-first sections, dispatch actions are only available after Previous section has departed.
     /// </summary>
-    private static IEnumerable<ActionContext> GetDepartureDispatcherActions(TrainSection section, IDispatcher dispatcher)
+    private static IEnumerable<ActionContext> GetDispatchActions(TrainSection section, IDispatcher dispatcher)
     {
         if (!section.Train.IsDispatchable) yield break;
         if (!section.IsPreviousDeparted) yield break;
+
+        var isRequesting = Is(section.RequestingDispatcher, dispatcher);
+        var isAccepting = Is(section.AcceptingDispatcher, dispatcher);
+        var isDeparting = Is(section.DepartingDispatcher, dispatcher);
+        var isArriving = Is(section.ArrivingDispatcher, dispatcher);
 
         switch (section.State)
         {
             case DispatchState.None:
             case DispatchState.Rejected:
             case DispatchState.Revoked:
-                yield return new ActionContext(section, DispatchAction.Request, dispatcher);
+                if (isRequesting)
+                    yield return new ActionContext(section, DispatchAction.Request, dispatcher);
+                if (section.Kind == TrainSectionKind.OneDispatcherInbound && isAccepting)
+                {
+                    // The driver asks by phone; accepting is the go.
+                    yield return new ActionContext(section, DispatchAction.Accept, dispatcher);
+                    if (section.State != DispatchState.Rejected)
+                        yield return new ActionContext(section, DispatchAction.Reject, dispatcher);
+                }
+                if (section.Kind == TrainSectionKind.OneDispatcherOutbound && isDeparting)
+                    yield return new ActionContext(section, DispatchAction.Depart, dispatcher);
                 break;
 
             case DispatchState.Requested:
-                yield return new ActionContext(section, DispatchAction.Revoke, dispatcher);
+                if (isAccepting)
+                {
+                    yield return new ActionContext(section, DispatchAction.Accept, dispatcher);
+                    yield return new ActionContext(section, DispatchAction.Reject, dispatcher);
+                }
+                if (isRequesting)
+                    yield return new ActionContext(section, DispatchAction.Revoke, dispatcher);
                 break;
 
             case DispatchState.Accepted:
-                yield return new ActionContext(section, DispatchAction.Depart, dispatcher);
-                yield return new ActionContext(section, DispatchAction.Revoke, dispatcher);
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Gets actions available to the arrival dispatcher.
-    /// For non-first sections, dispatch actions are only available after Previous section has departed.
-    /// </summary>
-    private static IEnumerable<ActionContext> GetArrivalDispatcherActions(TrainSection section, IDispatcher dispatcher)
-    {
-        if (!section.Train.IsDispatchable) yield break;
-        if (!section.IsPreviousDeparted) yield break;
-
-        switch (section.State)
-        {
-            case DispatchState.Requested:
-                yield return new ActionContext(section, DispatchAction.Accept, dispatcher);
-                yield return new ActionContext(section, DispatchAction.Reject, dispatcher);
-                break;
-
-            case DispatchState.Accepted:
-                // Arrival dispatcher can revoke before train departs
-                yield return new ActionContext(section, DispatchAction.Revoke, dispatcher);
+                if (isDeparting)
+                    yield return new ActionContext(section, DispatchAction.Depart, dispatcher);
+                // Both the requesting and the accepting dispatcher can revoke before the train departs.
+                if (isRequesting || isAccepting)
+                    yield return new ActionContext(section, DispatchAction.Revoke, dispatcher);
                 break;
 
             case DispatchState.Departed:
                 // Arrive is only available when on the last TrackStretch
-                if (section.IsOnLastTrackStretch)
-                {
+                if (isArriving && section.IsOnLastTrackStretch)
                     yield return new ActionContext(section, DispatchAction.Arrive, dispatcher);
-                }
                 break;
         }
     }
@@ -137,7 +113,7 @@ internal sealed class ActionStateMachine : IActionProvider
 
         // Check if the next control point is a SignalControlledPlace controlled by this dispatcher
         var nextControlPoint = section.NextControlPoint;
-        if (nextControlPoint is SignalControlledPlace scp && scp.ControlledBy.Id == dispatcher.Id)
+        if (nextControlPoint is SignalControlledPlace scp && scp.ControlledBy?.Id == dispatcher.Id)
         {
             yield return new ActionContext(section, DispatchAction.Pass, dispatcher, scp);
         }
@@ -145,7 +121,7 @@ internal sealed class ActionStateMachine : IActionProvider
 
     /// <summary>
     /// Gets train state actions.
-    /// First section only: Manned (when Planned), Canceled (when Planned), Running (when Manned).
+    /// First section only: Manned (when Planned), Canceled (when Planned).
     /// Non-first sections: Aborted (when Running) only.
     /// UndoTrainState is available when the train has a previous state to revert to.
     /// Note: Completed is NOT an action - it's automatically triggered when the last section arrives.
