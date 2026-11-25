@@ -1,0 +1,99 @@
+name: Publish NuGet packages
+
+# Packs the libraries Tellurian.Trains.Dispatch and Tellurian.Trains.Dispatch.Data and pushes them to nuget.org.
+# Push to master: publishes when nuget.org has no Tellurian.Trains.Dispatch with <Version> from Directory.Build.props yet.
+# Both packages share the version in Directory.Build.props, so bumping it publishes both.
+# Manual run: publishes the current version; versions already on nuget.org are skipped.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # Packed one by one: the solution also holds the Server app, which is not a package.
+  LIBRARIES: Tellurian.Trains.Dispatch Tellurian.Trains.Dispatch.Data
+  TESTS: Tellurian.Trains.Dispatch.Tests Tellurian.Trains.Dispatch.Data.Tests
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # OIDC for nuget.org trusted publishing.
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Decide whether to publish
+        id: version
+        env:
+          IS_MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -1 | tr -d '[:space:]')
+          if [ -z "$version" ]; then echo "::error::No <Version> found in Directory.Build.props"; exit 1; fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          lower=$(echo "$version" | tr '[:upper:]' '[:lower:]')
+          if curl -sf "https://api.nuget.org/v3-flatcontainer/tellurian.trains.dispatch/$lower/tellurian.trains.dispatch.nuspec" > /dev/null; then
+            if [ "$IS_MANUAL" = "true" ]; then
+              echo "Version $version is on nuget.org; manual run, publishing the packages that are missing."
+              echo "publish=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "Version $version is already on nuget.org, nothing to publish."
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "Version $version is new and will be published."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-dotnet@v6
+        if: steps.version.outputs.publish == 'true'
+        with:
+          global-json-file: global.json
+
+      - name: Test
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          for project in $TESTS; do
+            dotnet test --project "$project" --configuration Release
+          done
+
+      - name: Pack
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          for library in $LIBRARIES; do
+            dotnet pack "$library" --configuration Release --output nupkgs
+          done
+
+      # Trusted publishing policy on nuget.org: owner tellurian, repository tellurianinteractive/Tellurian.Trains.Dispatch,
+      # workflow publish.yml. The user is the nuget.org profile name, not a secret; the API key lives about an hour.
+      - name: NuGet login
+        id: login
+        if: steps.version.outputs.publish == 'true'
+        uses: NuGet/login@v1
+        with:
+          user: tellurian
+
+      - name: Push to nuget.org
+        if: steps.version.outputs.publish == 'true'
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "nupkgs/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Summary
+        if: steps.version.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "### Published to nuget.org, version $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          for library in $LIBRARIES; do echo "- [$library](https://www.nuget.org/packages/$library/$VERSION)" >> "$GITHUB_STEP_SUMMARY"; done
